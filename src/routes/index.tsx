@@ -1,6 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Search, Sparkles, Fuel } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Search,
+  Sparkles,
+  Fuel,
+  UserRound,
+  MapPin,
+  Locate,
+  X,
+} from "lucide-react";
 import { BottomNav } from "@/components/fuel/BottomNav";
 import { StationCard } from "@/components/fuel/StationCard";
 import { StationMap } from "@/components/fuel/StationMap";
@@ -13,15 +21,15 @@ import {
   distanceKm,
 } from "@/lib/fuel/derive";
 import { MANDALAY_CENTER } from "@/lib/fuel/stations";
+import { useSession } from "@/lib/fuel/session";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { maskPhone } from "@/lib/fuel/phone";
 
 export const Route = createFileRoute("/")({
   component: DiscoverPage,
 });
 
-const STATUS_META: Record<
-  FuelStatus,
-  { my: string; dot: string }
-> = {
+const STATUS_META: Record<FuelStatus, { my: string; dot: string }> = {
   Available: { my: "ရနိုင်သည်", dot: "bg-available" },
   Limited: { my: "အနည်းငယ်ရှိ", dot: "bg-limited" },
   "Sold Out": { my: "ကုန်ဆုံး", dot: "bg-soldout" },
@@ -35,13 +43,33 @@ const LEGEND_LABEL: Record<FuelStatus, string> = {
   Closed: "ပိတ်ထားသည်",
 };
 
+type Radius = 2 | 5 | 10 | "all";
+const RADIUS_OPTIONS: { value: Radius; label: string }[] = [
+  { value: 2, label: "2 km" },
+  { value: 5, label: "5 km" },
+  { value: 10, label: "10 km" },
+  { value: "all", label: "အားလုံး · All" },
+];
+
 function DiscoverPage() {
   const { stations, reports } = useFuelStore();
   const [fuel, setFuel] = useState<FuelType | "All">("All");
   const [statusFilter, setStatusFilter] = useState<FuelStatus | "All">("All");
   const [q, setQ] = useState("");
+  const [radius, setRadius] = useState<Radius>(5);
+  const [showExplainer, setShowExplainer] = useState(false);
+  const [explainerDismissed, setExplainerDismissed] = useState(false);
+  const geo = useGeolocation();
+  const { profile, openSheet } = useSession();
 
-  const rows = useMemo(() => {
+  // Show the in-app explanation on first Discover visit only.
+  useEffect(() => {
+    if (!explainerDismissed && geo.status === "idle") setShowExplainer(true);
+  }, [explainerDismissed, geo.status]);
+
+  const origin = geo.coords ?? MANDALAY_CENTER;
+
+  const rowsAll = useMemo(() => {
     const query = q.trim().toLowerCase();
     return stations
       .filter((s) => (fuel === "All" ? true : s.offeredFuels.includes(fuel)))
@@ -60,17 +88,26 @@ function DiscoverPage() {
         return {
           station: s,
           state,
-          distance: distanceKm(MANDALAY_CENTER, { lat: s.lat, lng: s.lng }),
+          distance: distanceKm(origin, { lat: s.lat, lng: s.lng }),
         };
       })
       .filter((r) =>
-        statusFilter === "All"
-          ? true
-          : r.state?.status === statusFilter,
+        statusFilter === "All" ? true : r.state?.status === statusFilter,
       )
       .sort((a, b) => a.distance - b.distance);
-  }, [stations, reports, fuel, statusFilter, q]);
+  }, [stations, reports, fuel, statusFilter, q, origin]);
 
+  const radiusActive = geo.coords && radius !== "all";
+  const rowsInRadius = useMemo(
+    () =>
+      radiusActive
+        ? rowsAll.filter((r) => r.distance <= (radius as number))
+        : rowsAll,
+    [rowsAll, radiusActive, radius],
+  );
+
+  const showAllFallback = radiusActive && rowsInRadius.length === 0;
+  const rows = showAllFallback ? rowsAll : rowsInRadius;
   const pins = rows.map((r) => ({
     station: r.station,
     status: r.state?.status ?? null,
@@ -99,6 +136,7 @@ function DiscoverPage() {
                 Community fuel map · Mandalay
               </p>
             </div>
+            <AccountButton profileName={profile?.name ?? null} maskedPhone={profile ? maskPhone(profile.phoneE164) : null} onClick={() => openSheet()} />
           </div>
 
           {/* Search */}
@@ -158,12 +196,25 @@ function DiscoverPage() {
               />
             ))}
           </div>
+
+          {/* Location bar */}
+          <LocationBar
+            geo={geo}
+            radius={radius}
+            setRadius={setRadius}
+            onEnable={() => setShowExplainer(true)}
+          />
         </header>
 
         {/* Map + sheet */}
         <section className="relative flex-1">
           <div className="relative h-[52vh] min-h-[320px] w-full overflow-hidden border-y border-border">
-            <StationMap pins={pins} center={MANDALAY_CENTER} />
+            <StationMap
+              pins={pins}
+              center={geo.coords ?? MANDALAY_CENTER}
+              userLocation={geo.coords}
+              radiusKm={radiusActive ? (radius as number) : null}
+            />
 
             {/* Legend */}
             <div className="pointer-events-none absolute bottom-3 left-3 z-[400] rounded-2xl border border-border bg-card/90 px-3 py-2 text-[11px] shadow-md backdrop-blur-sm">
@@ -180,7 +231,6 @@ function DiscoverPage() {
               </ul>
             </div>
 
-            {/* Floating Ask launcher */}
             <Link
               to="/ask"
               className="absolute right-3 top-3 z-[400] inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -200,7 +250,22 @@ function DiscoverPage() {
               </h2>
               <p className="mt-0.5 text-[12px] text-muted-foreground">
                 Nearby stations · {rows.length} results
+                {radiusActive && !showAllFallback ? ` · within ${radius} km` : ""}
               </p>
+
+              {showAllFallback && (
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-card px-3 py-2 text-[12px]">
+                  <span className="text-foreground">
+                    ရွေးထားသော {radius} km အတွင်း မတွေ့ရှိပါ။ အားလုံးပြပါ။
+                  </span>
+                  <button
+                    onClick={() => setRadius("all")}
+                    className="h-8 rounded-full bg-primary px-3 text-[12px] font-medium text-primary-foreground"
+                  >
+                    Show all
+                  </button>
+                </div>
+              )}
 
               <div className="mt-3 space-y-2.5">
                 {rows.length === 0 ? (
@@ -222,7 +287,198 @@ function DiscoverPage() {
           </div>
         </section>
       </main>
+
+      {showExplainer && geo.status === "idle" && (
+        <LocationExplainer
+          onAllow={() => {
+            setShowExplainer(false);
+            setExplainerDismissed(true);
+            geo.request();
+          }}
+          onDecline={() => {
+            setShowExplainer(false);
+            setExplainerDismissed(true);
+          }}
+        />
+      )}
       <BottomNav />
+    </div>
+  );
+}
+
+function AccountButton({
+  profileName,
+  maskedPhone,
+  onClick,
+}: {
+  profileName: string | null;
+  maskedPhone: string | null;
+  onClick: () => void;
+}) {
+  const signedIn = !!profileName;
+  return (
+    <button
+      onClick={onClick}
+      aria-label={signedIn ? "Account" : "အချက်အလက်ဖြည့်ရန်"}
+      className={`shrink-0 inline-flex h-10 items-center gap-1.5 rounded-full border px-2.5 text-[12px] font-medium transition ${
+        signedIn
+          ? "border-border bg-card text-foreground"
+          : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+      }`}
+    >
+      <span
+        className={`grid h-7 w-7 place-items-center rounded-full ${
+          signedIn ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary"
+        }`}
+      >
+        {signedIn ? (
+          <span className="text-[12px] font-bold">
+            {profileName!.trim().charAt(0).toUpperCase() || "•"}
+          </span>
+        ) : (
+          <UserRound className="h-4 w-4" aria-hidden />
+        )}
+      </span>
+      <span className="hidden truncate whitespace-nowrap sm:inline">
+        {signedIn ? maskedPhone ?? "Account" : "အချက်အလက်ဖြည့်ရန်"}
+      </span>
+    </button>
+  );
+}
+
+function LocationBar({
+  geo,
+  radius,
+  setRadius,
+  onEnable,
+}: {
+  geo: ReturnType<typeof useGeolocation>;
+  radius: Radius;
+  setRadius: (r: Radius) => void;
+  onEnable: () => void;
+}) {
+  if (geo.status === "granted") {
+    return (
+      <div className="mt-3">
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <MapPin className="h-3 w-3" aria-hidden />
+          <span>လက်ရှိတည်နေရာအတိုင်း ရှာဖွေထား · Using your location</span>
+        </div>
+        <div
+          role="tablist"
+          aria-label="Radius"
+          className="no-scrollbar mt-1.5 flex gap-1.5 overflow-x-auto"
+        >
+          {RADIUS_OPTIONS.map((o) => (
+            <FilterChip
+              key={String(o.value)}
+              active={radius === o.value}
+              onClick={() => setRadius(o.value)}
+              label={o.label}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (geo.status === "requesting") {
+    return (
+      <p className="mt-3 text-[11px] text-muted-foreground">
+        တည်နေရာ တောင်းဆိုနေသည် · Requesting location…
+      </p>
+    );
+  }
+
+  if (geo.status === "idle") {
+    return (
+      <button
+        type="button"
+        onClick={onEnable}
+        className="mt-3 inline-flex h-10 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 text-[12px] font-medium text-primary"
+      >
+        <Locate className="h-4 w-4" aria-hidden />
+        တည်နေရာဖွင့်ရန် · Use my location
+      </button>
+    );
+  }
+
+  // denied / unavailable / timeout / unsupported
+  const msg =
+    geo.status === "denied"
+      ? "တည်နေရာ ခွင့်ပြုမပေးထားပါ · Location permission denied."
+      : geo.status === "unsupported"
+        ? "ဤ browser တွင် တည်နေရာ မထောက်ပံ့ပါ · Not supported."
+        : geo.status === "timeout"
+          ? "အချိန်ကုန်သွားသည် · Location request timed out."
+          : "တည်နေရာ မရရှိပါ · Location unavailable.";
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 text-[12px]">
+      <span className="text-foreground">{msg} မန္တလေးမြေပုံဖြင့် ဆက်ကြည့်နိုင်ပါသည်။</span>
+      {geo.status !== "unsupported" && (
+        <button
+          onClick={() => {
+            geo.reset();
+            onEnable();
+          }}
+          className="ml-auto inline-flex h-8 items-center gap-1 rounded-full bg-primary px-3 text-[12px] font-medium text-primary-foreground"
+        >
+          <Locate className="h-3.5 w-3.5" aria-hidden />
+          Retry location
+        </button>
+      )}
+    </div>
+  );
+}
+
+function LocationExplainer({
+  onAllow,
+  onDecline,
+}: {
+  onAllow: () => void;
+  onDecline: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Location permission"
+      className="fixed inset-0 z-[999] flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
+    >
+      <div className="w-full max-w-md rounded-t-3xl border border-border bg-card p-5 shadow-2xl sm:rounded-3xl">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-foreground">
+            တည်နေရာ သုံးခွင့် · Use your location?
+          </h2>
+          <button
+            onClick={onDecline}
+            aria-label="Close"
+            className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background text-foreground"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+        <p className="text-sm text-foreground">
+          အနီးဆုံး ဆီဆိုင်များကိုသာ ရှာဖွေရန် အသုံးပြုပါသည်။ တည်နေရာအား သိမ်းဆည်းထားခြင်း မရှိပါ။
+        </p>
+        <p className="mt-1.5 text-[12px] text-muted-foreground">
+          Used only to find nearby stations. Your coordinates are not saved.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            onClick={onDecline}
+            className="h-11 rounded-full border border-border bg-background text-sm font-medium text-foreground"
+          >
+            Not now
+          </button>
+          <button
+            onClick={onAllow}
+            className="h-11 rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+          >
+            ခွင့်ပြု · Allow
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -250,10 +506,7 @@ function FilterChip({
       }`}
     >
       {dotClass ? (
-        <span
-          className={`inline-block h-2 w-2 rounded-full ${dotClass}`}
-          aria-hidden
-        />
+        <span className={`inline-block h-2 w-2 rounded-full ${dotClass}`} aria-hidden />
       ) : null}
       <span className="whitespace-nowrap">{label}</span>
     </button>

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -13,6 +13,7 @@ import { AppShell } from "@/components/fuel/AppShell";
 import { StatusBadge } from "@/components/fuel/StatusBadge";
 import { QueueBadge } from "@/components/fuel/QueueBadge";
 import { useFuelStore } from "@/lib/fuel/store";
+import { useSession } from "@/lib/fuel/session";
 import {
   deriveStationStates,
   distanceKm,
@@ -44,7 +45,9 @@ const CONFIDENCE_LABEL: Record<Confidence, string> = {
 function StationDetail() {
   const { id } = Route.useParams();
   const router = useRouter();
+  const navigate = useNavigate();
   const { stations, reports, confirmReport, canConfirm } = useFuelStore();
+  const { requireCompleteProfile } = useSession();
   const station = stations.find((s) => s.id === id);
   if (!station) throw notFound();
 
@@ -107,23 +110,37 @@ function StationDetail() {
           {dist.toFixed(1)} km from central Mandalay
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <a
-            href={directionsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() =>
+              requireCompleteProfile({
+                kind: "directions",
+                stationId: station.id,
+                directionsUrl,
+                onResume: () =>
+                  window.open(directionsUrl, "_blank", "noopener,noreferrer"),
+              })
+            }
             className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
           >
             <Navigation className="h-4 w-4" aria-hidden />
             လမ်းညွှန် · Directions
-          </a>
-          <Link
-            to="/report"
-            search={{ stationId: station.id }}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              requireCompleteProfile({
+                kind: "report",
+                stationId: station.id,
+                onResume: () =>
+                  navigate({ to: "/report", search: { stationId: station.id } }),
+              })
+            }
             className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-primary bg-card px-4 text-sm font-medium text-primary"
           >
             <PlusCircle className="h-4 w-4" aria-hidden />
             အစီရင်ခံ · Report
-          </Link>
+          </button>
         </div>
       </section>
 
@@ -177,7 +194,17 @@ function StationDetail() {
                       <StillAccurateButton
                         reportId={latest.id}
                         canConfirm={canConfirm}
-                        confirmReport={confirmReport}
+                        confirmReport={(rid) => {
+                          let out: { ok: boolean; cooldownRemainingMs?: number } = { ok: false };
+                          requireCompleteProfile({
+                            kind: "confirm",
+                            stationId: station.id,
+                            onResume: () => {
+                              out = confirmReport(rid);
+                            },
+                          });
+                          return out;
+                        }}
                       />
                     ) : null}
                   </>

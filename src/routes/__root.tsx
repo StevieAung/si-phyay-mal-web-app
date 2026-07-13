@@ -12,6 +12,8 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { FuelProvider } from "../lib/fuel/store";
+import { SessionProvider } from "../lib/fuel/session";
+import { AccountSheet } from "../components/fuel/AccountSheet";
 
 function NotFoundComponent() {
   return (
@@ -121,7 +123,10 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <FuelProvider>
-        <Outlet />
+        <SessionProvider>
+          <Outlet />
+          <AccountSheet />
+        </SessionProvider>
       </FuelProvider>
     </QueryClientProvider>
   );
