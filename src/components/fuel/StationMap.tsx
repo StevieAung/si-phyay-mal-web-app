@@ -19,11 +19,15 @@ export function StationMap({
   pins,
   center,
   selectedId,
+  userLocation,
+  radiusKm,
   heightClass = "h-full",
 }: {
   pins: Pin[];
   center: { lat: number; lng: number };
   selectedId?: string;
+  userLocation?: { lat: number; lng: number } | null;
+  radiusKm?: number | null;
   heightClass?: string;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -41,11 +45,13 @@ export function StationMap({
         pins={pins}
         center={center}
         selectedId={selectedId}
+        userLocation={userLocation ?? null}
+        radiusKm={radiusKm ?? null}
         onSelect={(id) => navigate({ to: "/station/$id", params: { id } })}
         onFail={() => setFailed(true)}
       />
     );
-  }, [mounted, pins, center, selectedId, navigate]);
+  }, [mounted, pins, center, selectedId, userLocation, radiusKm, navigate]);
 
   return (
     <div className={`relative w-full overflow-hidden bg-secondary ${heightClass}`}>
@@ -80,16 +86,28 @@ function pumpSvg(color: string, selected: boolean) {
 </div>`;
 }
 
+function userDotSvg() {
+  return `
+<div style="position:relative;width:22px;height:22px;transform:translate(-50%,-50%);">
+  <span style="position:absolute;inset:-8px;border-radius:9999px;background:rgba(37,99,235,0.18);"></span>
+  <span style="position:absolute;inset:0;border-radius:9999px;background:#2563eb;border:3px solid #ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.25);"></span>
+</div>`;
+}
+
 function LeafletMap({
   pins,
   center,
   selectedId,
+  userLocation,
+  radiusKm,
   onSelect,
   onFail,
 }: {
   pins: Pin[];
   center: { lat: number; lng: number };
   selectedId?: string;
+  userLocation: { lat: number; lng: number } | null;
+  radiusKm: number | null;
   onSelect: (id: string) => void;
   onFail: () => void;
 }) {
@@ -98,6 +116,8 @@ function LeafletMap({
     TileLayer: React.ComponentType<Record<string, unknown>>;
     Marker: React.ComponentType<Record<string, unknown>>;
     Tooltip: React.ComponentType<Record<string, unknown>>;
+    Circle: React.ComponentType<Record<string, unknown>>;
+    useMap: () => import("leaflet").Map;
     L: typeof import("leaflet");
   }>(null);
 
@@ -111,6 +131,8 @@ function LeafletMap({
           TileLayer: mod.TileLayer as unknown as React.ComponentType<Record<string, unknown>>,
           Marker: mod.Marker as unknown as React.ComponentType<Record<string, unknown>>,
           Tooltip: mod.Tooltip as unknown as React.ComponentType<Record<string, unknown>>,
+          Circle: mod.Circle as unknown as React.ComponentType<Record<string, unknown>>,
+          useMap: mod.useMap as unknown as () => import("leaflet").Map,
           L: L.default ?? L,
         });
       })
@@ -121,7 +143,26 @@ function LeafletMap({
   }, [onFail]);
 
   if (!Comp) return null;
-  const { MapContainer, TileLayer, Marker, Tooltip, L } = Comp;
+  const { MapContainer, TileLayer, Marker, Tooltip, Circle, useMap, L } = Comp;
+
+  const userIcon = userLocation
+    ? L.divIcon({
+        className: "user-pin",
+        html: userDotSvg(),
+        iconSize: [22, 22],
+        iconAnchor: [0, 0],
+      })
+    : null;
+
+  function Recenter({ lat, lng }: { lat: number; lng: number }) {
+    const map = useMap();
+    useEffect(() => {
+      map.setView([lat, lng], map.getZoom() < 13 ? 13 : map.getZoom(), {
+        animate: true,
+      });
+    }, [map, lat, lng]);
+    return null;
+  }
 
   return (
     <MapContainer
@@ -134,6 +175,26 @@ function LeafletMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      {userLocation ? <Recenter lat={userLocation.lat} lng={userLocation.lng} /> : null}
+      {userLocation && radiusKm && radiusKm > 0 ? (
+        <Circle
+          center={[userLocation.lat, userLocation.lng]}
+          radius={radiusKm * 1000}
+          pathOptions={{
+            color: "#2563eb",
+            weight: 1.5,
+            fillColor: "#2563eb",
+            fillOpacity: 0.08,
+          }}
+        />
+      ) : null}
+      {userLocation && userIcon ? (
+        <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
+          <Tooltip direction="top" offset={[0, -12]} opacity={1}>
+            <span className="text-xs font-medium">သင့်တည်နေရာ · You</span>
+          </Tooltip>
+        </Marker>
+      ) : null}
       {pins.map(({ station, status }) => {
         const color = STATUS_COLOR[status ?? "Unknown"];
         const isSel = station.id === selectedId;
