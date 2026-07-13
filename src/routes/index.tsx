@@ -28,6 +28,13 @@ const STATUS_META: Record<
   Closed: { my: "ပိတ်ထားသည်", dot: "bg-closed" },
 };
 
+const LEGEND_LABEL: Record<FuelStatus, string> = {
+  Available: "ရရှိနိုင်သည်",
+  Limited: "အကန့်အသတ်",
+  "Sold Out": "ရောင်းကုန်",
+  Closed: "ပိတ်ထားသည်",
+};
+
 function DiscoverPage() {
   const { stations, reports } = useFuelStore();
   const [fuel, setFuel] = useState<FuelType | "All">("All");
@@ -159,15 +166,15 @@ function DiscoverPage() {
             <StationMap pins={pins} center={MANDALAY_CENTER} />
 
             {/* Legend */}
-            <div className="pointer-events-none absolute left-3 top-3 z-[400] rounded-2xl border border-border bg-card/95 px-3 py-2 text-[11px] shadow-md backdrop-blur">
-              <ul className="space-y-1">
+            <div className="pointer-events-none absolute bottom-3 left-3 z-[400] rounded-2xl border border-border bg-card/90 px-3 py-2 text-[11px] shadow-md backdrop-blur-sm">
+              <ul className="grid grid-cols-2 gap-x-3 gap-y-1">
                 {FUEL_STATUSES.map((s) => (
-                  <li key={s} className="flex items-center gap-2">
+                  <li key={s} className="flex items-center gap-1.5">
                     <span
                       className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_META[s].dot}`}
                       aria-hidden
                     />
-                    <span className="text-foreground">{STATUS_META[s].my}</span>
+                    <span className="text-foreground">{LEGEND_LABEL[s]}</span>
                   </li>
                 ))}
               </ul>
@@ -185,7 +192,7 @@ function DiscoverPage() {
           </div>
 
           {/* Nearby stations sheet */}
-          <div className="relative -mt-6 rounded-t-[28px] border-t border-border bg-background pb-24 pt-3 shadow-[0_-8px_24px_-12px_rgba(24,32,43,0.15)]">
+          <div className="relative -mt-6 rounded-t-[28px] border-t border-border bg-background pb-[calc(7rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_-12px_rgba(24,32,43,0.15)]">
             <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-border" aria-hidden />
             <div className="px-4">
               <h2 className="text-base font-semibold text-foreground">
@@ -215,9 +222,7 @@ function DiscoverPage() {
           </div>
         </section>
       </main>
-      <div className="mx-auto w-full max-w-lg">
-        <BottomNav />
-      </div>
+      <BottomNav />
     </div>
   );
 }

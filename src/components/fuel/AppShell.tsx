@@ -4,12 +4,10 @@ import { BottomNav } from "./BottomNav";
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <main className="mx-auto w-full max-w-lg flex-1 px-4 pb-4 pt-3">
+      <main className="mx-auto w-full max-w-lg flex-1 px-4 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))]">
         {children}
       </main>
-      <div className="mx-auto w-full max-w-lg">
-        <BottomNav />
-      </div>
+      <BottomNav />
     </div>
   );
 }
