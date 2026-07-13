@@ -28,6 +28,13 @@ const STATUS_META: Record<
   Closed: { my: "ပိတ်ထားသည်", dot: "bg-closed" },
 };
 
+const LEGEND_LABEL: Record<FuelStatus, string> = {
+  Available: "ရရှိနိုင်သည်",
+  Limited: "အကန့်အသတ်",
+  "Sold Out": "ရောင်းကုန်",
+  Closed: "ပိတ်ထားသည်",
+};
+
 function DiscoverPage() {
   const { stations, reports } = useFuelStore();
   const [fuel, setFuel] = useState<FuelType | "All">("All");
