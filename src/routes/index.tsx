@@ -159,10 +159,10 @@ function DiscoverPage() {
             <StationMap pins={pins} center={MANDALAY_CENTER} />
 
             {/* Legend */}
-            <div className="pointer-events-none absolute left-3 top-3 z-[400] rounded-2xl border border-border bg-card/95 px-3 py-2 text-[11px] shadow-md backdrop-blur">
-              <ul className="space-y-1">
+            <div className="pointer-events-none absolute bottom-3 left-3 z-[400] rounded-2xl border border-border bg-card/90 px-3 py-2 text-[11px] shadow-md backdrop-blur-sm">
+              <ul className="grid grid-cols-2 gap-x-3 gap-y-1">
                 {FUEL_STATUSES.map((s) => (
-                  <li key={s} className="flex items-center gap-2">
+                  <li key={s} className="flex items-center gap-1.5">
                     <span
                       className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_META[s].dot}`}
                       aria-hidden
