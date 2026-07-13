@@ -19,7 +19,9 @@ export interface Report {
   status: FuelStatus;
   queue: QueueLength | null;
   timestamp: number;
+  createdAt: number;
   deviceId: string;
+  confirmationCount: number;
 }
 
 export interface Station {

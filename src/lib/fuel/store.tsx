@@ -2,12 +2,34 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { SEED_STATIONS, seedReports } from "./stations";
-import type { FuelType, QueueLength, Report, Station, FuelStatus } from "./types";
+import {
+  FUEL_STATUSES,
+  FUEL_TYPES,
+  QUEUE_LENGTHS,
+  type FuelStatus,
+  type FuelType,
+  type QueueLength,
+  type Report,
+  type Station,
+} from "./types";
+
+const STORAGE_VERSION = 1;
+const REPORTS_KEY = `sfm:v${STORAGE_VERSION}:reports`;
+const DEVICE_KEY = `sfm:v${STORAGE_VERSION}:deviceId`;
+const COOLDOWN_KEY = `sfm:v${STORAGE_VERSION}:confirmCooldown`;
+const CONFIRM_COOLDOWN_MS = 60_000; // 60s per (device, report)
+
+export interface ConfirmResult {
+  ok: boolean;
+  cooldownRemainingMs?: number;
+}
 
 interface FuelStore {
   stations: Station[];
@@ -18,41 +40,216 @@ interface FuelStore {
     status: FuelStatus;
     queue: QueueLength | null;
   }) => void;
+  confirmReport: (reportId: string) => ConfirmResult;
+  canConfirm: (reportId: string, nowMs?: number) => boolean;
   deviceId: string;
+  hydrated: boolean;
 }
 
 const FuelContext = createContext<FuelStore | null>(null);
 
-function newDeviceId() {
-  return `dev-${Math.random().toString(36).slice(2, 10)}`;
+function randomId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
+
+// ---------- Validation ----------
+
+function isReport(v: unknown): v is Report {
+  if (!v || typeof v !== "object") return false;
+  const r = v as Record<string, unknown>;
+  if (typeof r.id !== "string") return false;
+  if (typeof r.stationId !== "string") return false;
+  if (typeof r.fuelType !== "string" || !FUEL_TYPES.includes(r.fuelType as FuelType)) return false;
+  if (typeof r.status !== "string" || !FUEL_STATUSES.includes(r.status as FuelStatus)) return false;
+  if (
+    r.queue !== null &&
+    (typeof r.queue !== "string" || !QUEUE_LENGTHS.includes(r.queue as QueueLength))
+  )
+    return false;
+  if (typeof r.timestamp !== "number" || !Number.isFinite(r.timestamp)) return false;
+  if (typeof r.deviceId !== "string") return false;
+  return true;
+}
+
+function normalizeReport(v: unknown): Report | null {
+  if (!isReport(v)) return null;
+  const r = v as Report;
+  return {
+    id: r.id,
+    stationId: r.stationId,
+    fuelType: r.fuelType,
+    status: r.status,
+    queue: r.status === "Closed" || r.status === "Sold Out" ? null : r.queue,
+    timestamp: r.timestamp,
+    createdAt: typeof r.createdAt === "number" ? r.createdAt : r.timestamp,
+    deviceId: r.deviceId,
+    confirmationCount:
+      typeof r.confirmationCount === "number" && r.confirmationCount >= 0
+        ? Math.floor(r.confirmationCount)
+        : 0,
+  };
+}
+
+// ---------- Safe storage ----------
+
+function safeGet(key: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSet(key: string, value: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    /* ignore quota / privacy errors */
+  }
+}
+
+function safeRemove(key: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
+function loadReports(): Report[] | null {
+  const raw = safeGet(REPORTS_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const cleaned: Report[] = [];
+    for (const item of parsed) {
+      const r = normalizeReport(item);
+      if (r) cleaned.push(r);
+    }
+    return cleaned;
+  } catch {
+    // Invalid JSON — clear the bad blob so we don't keep failing.
+    safeRemove(REPORTS_KEY);
+    return null;
+  }
+}
+
+function loadCooldowns(): Record<string, number> {
+  const raw = safeGet(COOLDOWN_KEY);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
+    }
+    return out;
+  } catch {
+    safeRemove(COOLDOWN_KEY);
+    return {};
+  }
+}
+
+function loadOrCreateDeviceId(): string {
+  const existing = safeGet(DEVICE_KEY);
+  if (existing && existing.length > 0) return existing;
+  const id = randomId("dev");
+  safeSet(DEVICE_KEY, id);
+  return id;
+}
+
+// ---------- Provider ----------
 
 export function FuelProvider({ children }: { children: ReactNode }) {
   const [stations] = useState<Station[]>(SEED_STATIONS);
+  // Start with seed data so SSR and first client render match.
   const [reports, setReports] = useState<Report[]>(() => seedReports());
-  const [deviceId] = useState<string>(newDeviceId);
+  const [deviceId, setDeviceId] = useState<string>("dev-ssr");
+  const [hydrated, setHydrated] = useState(false);
+  const cooldownsRef = useRef<Record<string, number>>({});
+
+  // Client-only hydration from localStorage.
+  useEffect(() => {
+    setDeviceId(loadOrCreateDeviceId());
+    cooldownsRef.current = loadCooldowns();
+    const stored = loadReports();
+    if (stored && stored.length > 0) setReports(stored);
+    setHydrated(true);
+  }, []);
+
+  // Persist reports after hydration.
+  useEffect(() => {
+    if (!hydrated) return;
+    safeSet(REPORTS_KEY, JSON.stringify(reports));
+  }, [reports, hydrated]);
 
   const addReport = useCallback<FuelStore["addReport"]>(
     ({ stationId, fuelType, status, queue }) => {
-      setReports((prev) => [
-        {
-          id: `r-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          stationId,
-          fuelType,
-          status,
-          queue: status === "Closed" || status === "Sold Out" ? null : queue,
-          timestamp: Date.now(),
-          deviceId,
-        },
-        ...prev,
-      ]);
+      const now = Date.now();
+      const newReport: Report = {
+        id: randomId("r"),
+        stationId,
+        fuelType,
+        status,
+        queue: status === "Closed" || status === "Sold Out" ? null : queue,
+        timestamp: now,
+        createdAt: now,
+        deviceId,
+        confirmationCount: 0,
+      };
+      setReports((prev) => [newReport, ...prev]);
     },
     [deviceId],
   );
 
-  const value = useMemo(
-    () => ({ stations, reports, addReport, deviceId }),
-    [stations, reports, addReport, deviceId],
+  const canConfirm = useCallback(
+    (reportId: string, nowMs: number = Date.now()) => {
+      const key = `${deviceId}:${reportId}`;
+      const last = cooldownsRef.current[key] ?? 0;
+      return nowMs - last >= CONFIRM_COOLDOWN_MS;
+    },
+    [deviceId],
+  );
+
+  const confirmReport = useCallback<FuelStore["confirmReport"]>(
+    (reportId) => {
+      const now = Date.now();
+      const key = `${deviceId}:${reportId}`;
+      const last = cooldownsRef.current[key] ?? 0;
+      const elapsed = now - last;
+      if (elapsed < CONFIRM_COOLDOWN_MS) {
+        return { ok: false, cooldownRemainingMs: CONFIRM_COOLDOWN_MS - elapsed };
+      }
+      cooldownsRef.current = { ...cooldownsRef.current, [key]: now };
+      safeSet(COOLDOWN_KEY, JSON.stringify(cooldownsRef.current));
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === reportId
+            ? { ...r, confirmationCount: r.confirmationCount + 1, timestamp: now }
+            : r,
+        ),
+      );
+      return { ok: true };
+    },
+    [deviceId],
+  );
+
+  const value = useMemo<FuelStore>(
+    () => ({
+      stations,
+      reports,
+      addReport,
+      confirmReport,
+      canConfirm,
+      deviceId,
+      hydrated,
+    }),
+    [stations, reports, addReport, confirmReport, canConfirm, deviceId, hydrated],
   );
 
   return <FuelContext.Provider value={value}>{children}</FuelContext.Provider>;
