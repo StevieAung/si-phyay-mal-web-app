@@ -185,7 +185,7 @@ function DiscoverPage() {
           </div>
 
           {/* Nearby stations sheet */}
-          <div className="relative -mt-6 rounded-t-[28px] border-t border-border bg-background pb-24 pt-3 shadow-[0_-8px_24px_-12px_rgba(24,32,43,0.15)]">
+          <div className="relative -mt-6 rounded-t-[28px] border-t border-border bg-background pb-[calc(7rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_-12px_rgba(24,32,43,0.15)]">
             <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-border" aria-hidden />
             <div className="px-4">
               <h2 className="text-base font-semibold text-foreground">
@@ -215,9 +215,7 @@ function DiscoverPage() {
           </div>
         </section>
       </main>
-      <div className="mx-auto w-full max-w-lg">
-        <BottomNav />
-      </div>
+      <BottomNav />
     </div>
   );
 }
