@@ -26,11 +26,13 @@ export function BottomNav() {
             <Link
               to={to}
               activeOptions={{ exact: !!exact }}
-              className="flex min-h-[56px] flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium text-muted-foreground data-[status=active]:text-primary"
+              className="group flex min-h-[56px] flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium text-muted-foreground data-[status=active]:text-primary"
             >
-              <Icon className="h-5 w-5" aria-hidden />
-              <span>{my}</span>
-              <span className="text-[9px] opacity-70">{label}</span>
+              <span className="grid h-8 w-14 place-items-center rounded-full transition-colors group-data-[status=active]:bg-primary/10">
+                <Icon className="h-5 w-5" aria-hidden />
+              </span>
+              <span className="leading-tight">{my}</span>
+              <span className="text-[9px] opacity-70 leading-none">{label}</span>
             </Link>
           </li>
         ))}

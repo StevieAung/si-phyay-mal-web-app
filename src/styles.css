@@ -72,30 +72,30 @@
 }
 
 :root {
-  --radius: 0.875rem;
-  /* Warm off-white background */
-  --background: oklch(0.985 0.012 90);
-  /* Charcoal foreground */
-  --foreground: oklch(0.24 0.02 240);
+  --radius: 1rem;
+  /* Warm ivory background ~#FAF8F3 */
+  --background: oklch(0.976 0.006 85);
+  /* Deep ink foreground ~#18202B */
+  --foreground: oklch(0.22 0.02 255);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.24 0.02 240);
+  --card-foreground: oklch(0.22 0.02 255);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.24 0.02 240);
-  /* Deep petrol green */
-  --primary: oklch(0.38 0.07 190);
-  --primary-foreground: oklch(0.985 0.012 90);
-  --secondary: oklch(0.94 0.02 190);
-  --secondary-foreground: oklch(0.28 0.05 200);
-  --muted: oklch(0.95 0.01 90);
-  --muted-foreground: oklch(0.48 0.02 240);
-  --accent: oklch(0.92 0.03 190);
-  --accent-foreground: oklch(0.28 0.05 200);
+  --popover-foreground: oklch(0.22 0.02 255);
+  /* Burnt orange primary ~#D84315 */
+  --primary: oklch(0.6 0.19 40);
+  --primary-foreground: oklch(0.99 0.005 85);
+  --secondary: oklch(0.94 0.012 75);
+  --secondary-foreground: oklch(0.3 0.03 60);
+  --muted: oklch(0.95 0.008 80);
+  --muted-foreground: oklch(0.5 0.02 255);
+  --accent: oklch(0.93 0.03 45);
+  --accent-foreground: oklch(0.35 0.08 40);
   /* Red for sold out */
   --destructive: oklch(0.58 0.22 28);
   --destructive-foreground: oklch(0.99 0.005 90);
-  --border: oklch(0.9 0.015 200);
-  --input: oklch(0.92 0.012 200);
-  --ring: oklch(0.55 0.08 190);
+  --border: oklch(0.9 0.01 75);
+  --input: oklch(0.92 0.01 75);
+  --ring: oklch(0.6 0.19 40);
   /* Fuel semantic tokens */
   --available: oklch(0.55 0.14 155);
   --available-foreground: oklch(0.99 0.005 90);
@@ -163,5 +163,24 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  :lang(my), .font-burmese {
+    font-family: var(--font-burmese);
   }
 }
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+}
+
+/* Leaflet custom pump marker */
+.pump-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
