@@ -29,16 +29,28 @@ function groupReports(reports: Report[]): ReportGroup | null {
   return { matching, conflicting, latest };
 }
 
+function totalConfirmations(matching: Report[]): number {
+  // Each matching report is itself one data point; confirmationCount are the
+  // "Still accurate" taps on top of that report.
+  let total = 0;
+  for (const r of matching) total += 1 + r.confirmationCount;
+  return total;
+}
+
 function computeConfidence(group: ReportGroup, nowMs: number): Confidence {
   const ageMs = nowMs - group.latest.timestamp;
   const fresh = ageMs <= FRESH_MS;
   const stale = ageMs > STALE_MS;
-  const confirmations = group.matching.length;
+  const matchingCount = group.matching.length;
+  const confirmations = totalConfirmations(group.matching);
   const conflicts = group.conflicting.filter((r) => nowMs - r.timestamp <= STALE_MS).length;
 
-  if (conflicts >= confirmations && conflicts > 0) return "Conflicting";
+  // Recent conflicting evidence dominates.
+  if (conflicts >= Math.max(1, matchingCount) && conflicts > 0) return "Conflicting";
   if (stale) return "Low";
-  if (fresh && confirmations >= 3) return "High";
+  // A lone report — even with many "Still accurate" taps — never rises to High.
+  if (matchingCount < 2) return fresh && confirmations >= 2 ? "Medium" : "Low";
+  if (fresh && confirmations >= 4) return "High";
   if (fresh && confirmations >= 2) return "Medium";
   return "Low";
 }
@@ -61,7 +73,7 @@ export function deriveFuelState(
       ? null
       : group.latest.queue,
     updatedAt: group.latest.timestamp,
-    confirmations: group.matching.length,
+    confirmations: totalConfirmations(group.matching),
     conflicting: group.conflicting.length,
     confidence: computeConfidence(group, nowMs),
   };
