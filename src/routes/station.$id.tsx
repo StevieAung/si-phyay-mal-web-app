@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -13,6 +13,7 @@ import { AppShell } from "@/components/fuel/AppShell";
 import { StatusBadge } from "@/components/fuel/StatusBadge";
 import { QueueBadge } from "@/components/fuel/QueueBadge";
 import { useFuelStore } from "@/lib/fuel/store";
+import { useSession } from "@/lib/fuel/session";
 import {
   deriveStationStates,
   distanceKm,
