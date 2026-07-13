@@ -194,7 +194,17 @@ function StationDetail() {
                       <StillAccurateButton
                         reportId={latest.id}
                         canConfirm={canConfirm}
-                        confirmReport={confirmReport}
+                        confirmReport={(rid) => {
+                          let out: { ok: boolean; cooldownRemainingMs?: number } = { ok: false };
+                          requireCompleteProfile({
+                            kind: "confirm",
+                            stationId: station.id,
+                            onResume: () => {
+                              out = confirmReport(rid);
+                            },
+                          });
+                          return out;
+                        }}
                       />
                     ) : null}
                   </>
