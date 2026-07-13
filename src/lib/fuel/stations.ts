@@ -121,6 +121,7 @@ export function seedReports(): Report[] {
     queue: Report["queue"],
     ageMin: number,
     deviceId = "seed",
+    confirmationCount = 0,
   ): Report => ({
     id: `seed-${stationId}-${fuelType}-${ageMin}-${Math.random().toString(36).slice(2, 7)}`,
     stationId,
@@ -128,7 +129,9 @@ export function seedReports(): Report[] {
     status,
     queue,
     timestamp: t - min(ageMin),
+    createdAt: t - min(ageMin),
     deviceId,
+    confirmationCount,
   });
 
   return [
