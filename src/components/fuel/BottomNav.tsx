@@ -16,27 +16,27 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card shadow-[0_-2px_10px_-6px_rgba(24,32,43,0.12)]"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card shadow-[0_-2px_10px_-6px_rgba(24,32,43,0.12)]"
+      style={{ paddingBottom: "max(env(safe-area-inset-bottom), 8px)" }}
     >
-      <ul className="mx-auto grid h-16 max-w-lg grid-cols-3 items-center">
+      <ul className="mx-auto grid h-[72px] max-w-lg grid-cols-3 items-center">
         <li>
           <NavItem {...SIDE_ITEMS[0]} />
         </li>
-        <li className="relative flex flex-col items-center justify-end">
+        <li className="relative flex h-full flex-col items-center justify-end pb-2">
           {/* Halo */}
           <span
             aria-hidden
-            className="pointer-events-none absolute left-1/2 -top-6 h-16 w-16 -translate-x-1/2 rounded-full bg-primary/15 blur-md"
+            className="pointer-events-none absolute left-1/2 -top-6 h-16 w-16 -translate-x-1/2 rounded-full bg-[#DC2626]/20 blur-md"
           />
           <Link
             to="/report"
             aria-label="Report / အစီရင်ခံ"
-            className="group absolute left-1/2 -top-5 grid h-[60px] w-[60px] -translate-x-1/2 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/35 outline-none ring-0 transition-transform duration-150 hover:scale-105 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card active:scale-[0.97]"
+            className="group absolute left-1/2 -top-5 grid h-[60px] w-[60px] -translate-x-1/2 place-items-center rounded-full bg-[#DC2626] text-white shadow-lg shadow-[#DC2626]/40 outline-none ring-0 transition-transform duration-150 hover:scale-105 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2 focus-visible:ring-offset-card active:scale-[0.97]"
           >
             <Plus className="h-7 w-7" aria-hidden strokeWidth={2.5} />
           </Link>
-          <span className="mb-1.5 text-[11px] font-semibold text-primary">
+          <span className="text-[11px] font-semibold text-[#DC2626]">
             အစီရင်ခံ
           </span>
         </li>
