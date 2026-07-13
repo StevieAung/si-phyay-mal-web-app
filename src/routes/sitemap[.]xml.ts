@@ -35,7 +35,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
           ...urls,
           `</urlset>`,
-        ]..join("\n");
+        ].join("\n");
 
         return new Response(xml, {
           headers: {
