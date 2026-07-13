@@ -1,5 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Map, MessageCircle, Plus } from "lucide-react";
+import { useSession } from "@/lib/fuel/session";
 
 const SIDE_ITEMS: {
   to: "/" | "/ask";
@@ -13,6 +14,17 @@ const SIDE_ITEMS: {
 ];
 
 export function BottomNav() {
+  const navigate = useNavigate();
+  const { requireCompleteProfile } = useSession();
+
+  function onReportClick(e: React.MouseEvent) {
+    e.preventDefault();
+    requireCompleteProfile({
+      kind: "report",
+      onResume: () => navigate({ to: "/report" }),
+    });
+  }
+
   return (
     <nav
       aria-label="Primary"
@@ -24,18 +36,18 @@ export function BottomNav() {
           <NavItem {...SIDE_ITEMS[0]} />
         </li>
         <li className="relative flex h-full flex-col items-center justify-end pb-2">
-          {/* Halo */}
           <span
             aria-hidden
             className="pointer-events-none absolute left-1/2 -top-6 h-16 w-16 -translate-x-1/2 rounded-full bg-[#DC2626]/20 blur-md"
           />
-          <Link
-            to="/report"
+          <button
+            type="button"
+            onClick={onReportClick}
             aria-label="Report / အစီရင်ခံ"
             className="group absolute left-1/2 -top-5 grid h-[60px] w-[60px] -translate-x-1/2 place-items-center rounded-full bg-[#DC2626] text-white shadow-lg shadow-[#DC2626]/40 outline-none ring-0 transition-transform duration-150 hover:scale-105 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2 focus-visible:ring-offset-card active:scale-[0.97]"
           >
             <Plus className="h-7 w-7" aria-hidden strokeWidth={2.5} />
-          </Link>
+          </button>
           <span className="text-[11px] font-semibold text-[#DC2626]">
             အစီရင်ခံ
           </span>

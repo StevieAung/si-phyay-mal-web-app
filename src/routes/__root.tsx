@@ -123,7 +123,10 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <FuelProvider>
-        <Outlet />
+        <SessionProvider>
+          <Outlet />
+          <AccountSheet />
+        </SessionProvider>
       </FuelProvider>
     </QueryClientProvider>
   );
