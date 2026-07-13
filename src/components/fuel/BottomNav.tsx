@@ -1,11 +1,17 @@
 import { Link } from "@tanstack/react-router";
 import { Map, MessageCircle, PlusCircle } from "lucide-react";
 
-const ITEMS = [
+const ITEMS: {
+  to: "/" | "/ask" | "/report";
+  label: string;
+  my: string;
+  Icon: typeof Map;
+  exact?: boolean;
+}[] = [
   { to: "/", label: "Discover", my: "ရှာဖွေ", Icon: Map, exact: true },
   { to: "/ask", label: "Ask", my: "မေးမြန်း", Icon: MessageCircle },
   { to: "/report", label: "Report", my: "အစီရင်ခံ", Icon: PlusCircle },
-] as const;
+];
 
 export function BottomNav() {
   return (
