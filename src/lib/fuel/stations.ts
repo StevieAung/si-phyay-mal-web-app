@@ -136,26 +136,27 @@ export function seedReports(): Report[] {
 
   return [
     // Required demo pair — Diesel comparison
-    r("st-parami-62", "Diesel", "Available", "Long", 5),
+    r("st-parami-62", "Diesel", "Available", "Long", 5, "seed", 1),
     r("st-parami-62", "Diesel", "Available", "Long", 12, "seed-2"),
-    r("st-shwe-byain-phyu", "Diesel", "Available", "Short", 8),
-    r("st-shwe-byain-phyu", "Diesel", "Available", "Short", 15, "seed-2"),
+    r("st-shwe-byain-phyu", "Diesel", "Available", "Short", 8, "seed", 2),
+    r("st-shwe-byain-phyu", "Diesel", "Available", "Short", 15, "seed-2", 1),
 
     // Denko 73rd — Available across the board
-    r("st-denko-73", "92", "Available", "Short", 6),
+    r("st-denko-73", "92", "Available", "Short", 6, "seed", 1),
     r("st-denko-73", "92", "Available", "Short", 14, "seed-2"),
     r("st-denko-73", "95", "Available", "No Queue", 10),
     r("st-denko-73", "Diesel", "Limited", "Medium", 9),
 
     // Max Bogyoke — Premium diesel available, 95 sold out
-    r("st-max-strand", "Premium Diesel", "Available", "No Queue", 4),
-    r("st-max-strand", "95", "Sold Out", null, 20),
+    r("st-max-strand", "Premium Diesel", "Available", "No Queue", 4, "seed", 1),
+    r("st-max-strand", "95", "Sold Out", null, 20, "seed", 1),
     r("st-max-strand", "95", "Sold Out", null, 32, "seed-2"),
     r("st-max-strand", "92", "Limited", "Medium", 18),
     r("st-max-strand", "Diesel", "Available", "Medium", 22),
 
     // ST Oil Yadanabon — fresh reports
-    r("st-st-oil-yadanabon", "92", "Available", "Medium", 3),
+    r("st-st-oil-yadanabon", "92", "Available", "Medium", 3, "seed", 2),
+    r("st-st-oil-yadanabon", "92", "Available", "Medium", 11, "seed-2"),
     r("st-st-oil-yadanabon", "Diesel", "Available", "Long", 7),
     r("st-st-oil-yadanabon", "Premium Diesel", "Available", "Short", 11),
 
@@ -164,7 +165,7 @@ export function seedReports(): Report[] {
     r("st-mps-84", "Diesel", "Closed", null, 25, "seed-2"),
 
     // Denko Airport — Diesel sold out
-    r("st-denko-airport", "Diesel", "Sold Out", null, 16),
+    r("st-denko-airport", "Diesel", "Sold Out", null, 16, "seed", 1),
     r("st-denko-airport", "Diesel", "Sold Out", null, 22, "seed-2"),
     r("st-denko-airport", "92", "Limited", "Long", 14),
 
@@ -179,7 +180,7 @@ export function seedReports(): Report[] {
     r("st-national-mahaaung", "Diesel", "Available", "Short", 110),
 
     // Max Sagaing Bridge — fresh, mostly available
-    r("st-max-sagaing-bridge", "92", "Available", "No Queue", 5),
+    r("st-max-sagaing-bridge", "92", "Available", "No Queue", 5, "seed", 1),
     r("st-max-sagaing-bridge", "95", "Available", "No Queue", 5),
     r("st-max-sagaing-bridge", "Diesel", "Limited", "Short", 13),
     r("st-max-sagaing-bridge", "Premium Diesel", "Available", "Short", 20),
