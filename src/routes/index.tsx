@@ -167,7 +167,7 @@ function DiscoverPage() {
                       className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_META[s].dot}`}
                       aria-hidden
                     />
-                    <span className="text-foreground">{STATUS_META[s].my}</span>
+                    <span className="text-foreground">{LEGEND_LABEL[s]}</span>
                   </li>
                 ))}
               </ul>
