@@ -163,5 +163,24 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  :lang(my), .font-burmese {
+    font-family: var(--font-burmese);
   }
 }
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+}
+
+/* Leaflet custom pump marker */
+.pump-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
