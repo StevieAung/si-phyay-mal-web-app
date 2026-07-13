@@ -1,0 +1,36 @@
+import type { ReactNode } from "react";
+import { BottomNav } from "./BottomNav";
+
+export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <main className="mx-auto w-full max-w-lg flex-1 px-4 pb-4 pt-3">
+        {children}
+      </main>
+      <div className="mx-auto w-full max-w-lg">
+        <BottomNav />
+      </div>
+    </div>
+  );
+}
+
+export function BrandHeader({ subtitle }: { subtitle?: string }) {
+  return (
+    <header className="mb-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold text-primary">ဆီဖြည့်မယ်</h1>
+          <p className="truncate text-[11px] text-muted-foreground">
+            ဆီရှိတဲ့နေရာ သိပြီး၊ ဆီဖြည့်မယ်။
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground">
+          📍 မန္တလေး · Mandalay
+        </span>
+      </div>
+      {subtitle ? (
+        <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
+      ) : null}
+    </header>
+  );
+}
