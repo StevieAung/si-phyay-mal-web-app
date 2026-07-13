@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { CheckCircle2 } from "lucide-react";
 import { AppShell, BrandHeader } from "@/components/fuel/AppShell";
 import { useFuelStore } from "@/lib/fuel/store";
+import { useSession } from "@/lib/fuel/session";
 import {
   FUEL_STATUSES,
   FUEL_TYPES,
