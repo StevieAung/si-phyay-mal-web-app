@@ -27,6 +27,29 @@ function ReportPage() {
   const { stationId: preselected } = Route.useSearch();
   const { stations, addReport } = useFuelStore();
   const navigate = useNavigate();
+  const { profile, requireCompleteProfile, isSheetOpen } = useSession();
+  const guardTriggered = useRef(false);
+
+  // Guard access: guests must complete demo profile before reporting.
+  useEffect(() => {
+    if (profile || guardTriggered.current) return;
+    guardTriggered.current = true;
+    requireCompleteProfile({
+      kind: "report",
+      stationId: preselected,
+      onResume: () => {
+        /* already on /report — user proceeds to fill and submit */
+      },
+    });
+  }, [profile, requireCompleteProfile, preselected]);
+
+  // If the guest cancels the demo sign-in sheet, leave the report page.
+  useEffect(() => {
+    if (!profile && guardTriggered.current && !isSheetOpen) {
+      navigate({ to: "/" });
+    }
+  }, [profile, isSheetOpen, navigate]);
+
 
   const [stationId, setStationId] = useState<string>(
     preselected ?? stations[0]?.id ?? "",
