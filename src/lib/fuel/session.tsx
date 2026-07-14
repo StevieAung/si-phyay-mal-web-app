@@ -151,14 +151,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const setPhone = useCallback(async (e164: string) => {
     setPhoneState(e164);
-    // Look up an existing profile for this phone via ownership-gated RPC.
-    const { data, error } = await supabase.rpc("get_profile_by_phone", { _phone: e164 });
-    if (!error && data && data.length > 0) {
-      const p = rowToProfile(data[0]);
-      setProfile(p);
-      safeSet(PROFILE_ID_KEY, p.id);
-      setStep("view");
-      return;
+    try {
+      const row = await getProfileByPhoneFn({ data: { phone: e164 } });
+      if (row) {
+        const p = rowToProfile(row);
+        setProfile(p);
+        safeSet(PROFILE_ID_KEY, p.id);
+        setStep("view");
+        return;
+      }
+    } catch {
+      /* fall through to profile step */
     }
     setStep("profile");
   }, []);
