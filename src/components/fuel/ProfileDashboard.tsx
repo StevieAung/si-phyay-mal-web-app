@@ -25,8 +25,12 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
     e.target.value = "";
   }
 
-  // ---------- Permission (demo, derived from parity for mock) ----------
-  const [permission, setPermission] = useState<FuelPermission>("allowed");
+  // ---------- Permission (derived from plate parity vs today's date) ----------
+  // Even date → စုံ plates allowed; Odd date → မ plates allowed. Informational only.
+  const today = new Date();
+  const todayParity: "စုံ" | "မ" = today.getDate() % 2 === 0 ? "စုံ" : "မ";
+  const permission: FuelPermission = profile.parity === todayParity ? "allowed" : "blocked";
+  const todayLabel = today.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 
   // ---------- Allowance from Engine CC ----------
   const isMoto = profile.vehicle === "မော်တော်ဆိုင်ကယ်";
@@ -132,13 +136,9 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
         <div className="rounded-2xl border border-border bg-background/60 p-3">
           <div className="flex items-center justify-between">
             <p className="text-[11px] text-muted-foreground">ဆီဖြည့်ခွင့်</p>
-            <button
-              type="button"
-              onClick={() => setPermission((p) => (p === "allowed" ? "blocked" : "allowed"))}
-              className="rounded-full border border-border bg-background px-1.5 py-0.5 text-[9px] text-muted-foreground"
-            >
-              toggle
-            </button>
+            <span className="rounded-full border border-border bg-background px-1.5 py-0.5 text-[9px] text-muted-foreground">
+              {todayLabel} · {todayParity}
+            </span>
           </div>
           {permission === "allowed" ? (
             <p className="mt-1 text-[12px] font-semibold text-available">
