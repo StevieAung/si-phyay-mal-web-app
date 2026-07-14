@@ -161,14 +161,13 @@ export function FuelProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const cooldownsRef = useRef<Record<string, number>>({});
 
-  // Client-only hydration from localStorage.
+  // Client-only hydration for device id + confirm cooldowns.
   useEffect(() => {
     setDeviceId(loadOrCreateDeviceId());
     cooldownsRef.current = loadCooldowns();
-    const stored = loadReports();
-    if (stored && stored.length > 0) setReports(stored);
     setHydrated(true);
   }, []);
+
 
   // Fetch stations from Lovable Cloud; fall back to seed on error.
   useEffect(() => {
