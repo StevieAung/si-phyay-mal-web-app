@@ -406,7 +406,13 @@ function ProfileView({
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+      </div>
+      <ProfileDashboard profile={profile} />
+    </div>
+  );
+}
+
+function _RowUnused() {
   return (
     <div className="rounded-xl border border-border bg-background/60 p-2.5">
       <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
