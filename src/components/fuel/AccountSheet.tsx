@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, ShieldCheck, LogOut, Pencil, Car, Bike } from "lucide-react";
 import { ProfileDashboard } from "./ProfileDashboard";
-import { useSession, type VehicleType } from "@/lib/fuel/session";
+import { useSession, type VehicleType, type FuelPref } from "@/lib/fuel/session";
 import { maskPhone, normalizeMyanmarPhone } from "@/lib/fuel/phone";
 import { PARITY_POLICY_NOTE, parsePlate, type PlateParity } from "@/lib/fuel/plate";
+
 
 export function AccountSheet() {
   const {
