@@ -17,6 +17,9 @@
       removeEventListener: noop,
       location: { href: "", hostname: "", pathname: "/", search: "", hash: "" },
       navigator: { userAgent: "", platform: "" },
+      devicePixelRatio: 1,
+      screen: { deviceXDPI: 1, logicalXDPI: 1, width: 0, height: 0 },
+      L_DISABLE_3D: true,
     };
     g.window = win;
   }
