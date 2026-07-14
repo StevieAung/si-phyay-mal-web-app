@@ -69,11 +69,14 @@ function ReportPage() {
     if (!station) return setError("Please select a station.");
     if (!station.offeredFuels.includes(fuelType))
       return setError("This station doesn't offer that fuel type.");
+    if (!profile)
+      return setError("Please complete your profile before reporting.");
     addReport({
       stationId,
       fuelType,
       status,
       queue: requiresQueue ? queue : null,
+      profileId: profile.id,
     });
     setSubmitted({ stationId });
   }
