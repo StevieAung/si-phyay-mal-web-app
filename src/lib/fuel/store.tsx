@@ -43,10 +43,8 @@ interface FuelStore {
     fuelType: FuelType;
     status: FuelStatus;
     queue: QueueLength | null;
+    profileId: string;
   }) => void;
-  confirmReport: (reportId: string) => ConfirmResult;
-  canConfirm: (reportId: string, nowMs?: number) => boolean;
-  deviceId: string;
   hydrated: boolean;
 }
 
