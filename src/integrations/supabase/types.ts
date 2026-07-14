@@ -84,6 +84,13 @@ export type Database = {
             referencedRelation: "reports"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "report_confirmations_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       reports: {
@@ -201,10 +208,109 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      report_confirmation_counts: {
+        Row: {
+          confirmation_count: number | null
+          report_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_confirmations_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_confirmations_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports_public: {
+        Row: {
+          created_at: string | null
+          fuel_type: string | null
+          id: string | null
+          queue_level: string | null
+          station_id: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fuel_type?: string | null
+          id?: string | null
+          queue_level?: string | null
+          station_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fuel_type?: string | null
+          id?: string | null
+          queue_level?: string | null
+          station_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      get_profile_by_id: {
+        Args: { _id: string }
+        Returns: {
+          engine_cc: number
+          fuel_type: string
+          id: string
+          license_plate: string
+          name: string
+          phone: string
+          vehicle_type: string
+        }[]
+      }
+      get_profile_by_phone: {
+        Args: { _phone: string }
+        Returns: {
+          engine_cc: number
+          fuel_type: string
+          id: string
+          license_plate: string
+          name: string
+          phone: string
+          vehicle_type: string
+        }[]
+      }
+      update_profile_by_phone: {
+        Args: {
+          _engine_cc: number
+          _fuel_type: string
+          _id: string
+          _license_plate: string
+          _name: string
+          _phone: string
+          _vehicle_type: string
+        }
+        Returns: {
+          engine_cc: number
+          fuel_type: string
+          id: string
+          license_plate: string
+          name: string
+          phone: string
+          vehicle_type: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
