@@ -263,21 +263,54 @@ export function FuelProvider({ children }: { children: ReactNode }) {
   const addReport = useCallback<FuelStore["addReport"]>(
     ({ stationId, fuelType, status, queue }) => {
       const now = Date.now();
-      const newReport: Report = {
-        id: randomId("r"),
+      const effectiveQueue =
+        status === "Closed" || status === "Sold Out" ? null : queue;
+      const tempId = randomId("r");
+      // Optimistic insert so the UI updates immediately.
+      const optimistic: Report = {
+        id: tempId,
         stationId,
         fuelType,
         status,
-        queue: status === "Closed" || status === "Sold Out" ? null : queue,
+        queue: effectiveQueue,
         timestamp: now,
         createdAt: now,
         deviceId,
         confirmationCount: 0,
       };
-      setReports((prev) => [newReport, ...prev]);
+      setReports((prev) => [optimistic, ...prev]);
+
+      // Persist to Lovable Cloud. user_id stays null until auth ships (Phase 3).
+      (async () => {
+        const { data, error } = await supabase
+          .from("reports")
+          .insert({
+            station_id: stationId,
+            fuel_type: fuelType,
+            status,
+            queue_level: effectiveQueue,
+          })
+          .select("id, created_at")
+          .single();
+        if (error || !data) {
+          // Roll back the optimistic entry on failure.
+          console.error("[reports] insert failed", error);
+          setReports((prev) => prev.filter((r) => r.id !== tempId));
+          return;
+        }
+        const ts = new Date(data.created_at).getTime();
+        setReports((prev) =>
+          prev.map((r) =>
+            r.id === tempId
+              ? { ...r, id: data.id, timestamp: ts, createdAt: ts }
+              : r,
+          ),
+        );
+      })();
     },
     [deviceId],
   );
+
 
   const canConfirm = useCallback(
     (reportId: string, nowMs: number = Date.now()) => {
