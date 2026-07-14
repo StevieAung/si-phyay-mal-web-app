@@ -43,6 +43,7 @@ interface FuelStore {
     fuelType: FuelType;
     status: FuelStatus;
     queue: QueueLength | null;
+    profileId: string;
   }) => void;
   confirmReport: (reportId: string) => ConfirmResult;
   canConfirm: (reportId: string, nowMs?: number) => boolean;
@@ -261,7 +262,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
 
 
   const addReport = useCallback<FuelStore["addReport"]>(
-    ({ stationId, fuelType, status, queue }) => {
+    ({ stationId, fuelType, status, queue, profileId }) => {
       const now = Date.now();
       const effectiveQueue =
         status === "Closed" || status === "Sold Out" ? null : queue;
@@ -280,7 +281,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
       };
       setReports((prev) => [optimistic, ...prev]);
 
-      // Persist to Lovable Cloud. user_id stays null until auth ships (Phase 3).
+      // Persist to Lovable Cloud, tying the row to the submitting profile.
       (async () => {
         const { data, error } = await supabase
           .from("reports")
@@ -289,6 +290,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
             fuel_type: fuelType,
             status,
             queue_level: effectiveQueue,
+            profile_id: profileId,
           })
           .select("id, created_at")
           .single();
