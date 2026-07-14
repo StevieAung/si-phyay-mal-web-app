@@ -115,13 +115,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!id) return;
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, phone, name, vehicle_type, license_plate, fuel_type, engine_cc")
-        .eq("id", id)
-        .maybeSingle();
-      if (cancelled || error || !data) return;
-      const p = rowToProfile(data);
+      const { data, error } = await supabase.rpc("get_profile_by_id", { _id: id });
+      if (cancelled || error || !data || data.length === 0) return;
+      const p = rowToProfile(data[0]);
       setProfile(p);
       setPhoneState(p.phoneE164);
     })();
@@ -129,6 +125,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
+
 
   const openSheet = useCallback(
     (s?: SheetStep) => {
