@@ -14,12 +14,49 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          created_at: string
+          engine_cc: number
+          fuel_type: string
+          id: string
+          license_plate: string
+          name: string
+          phone: string
+          updated_at: string
+          vehicle_type: string
+        }
+        Insert: {
+          created_at?: string
+          engine_cc: number
+          fuel_type: string
+          id?: string
+          license_plate: string
+          name: string
+          phone: string
+          updated_at?: string
+          vehicle_type: string
+        }
+        Update: {
+          created_at?: string
+          engine_cc?: number
+          fuel_type?: string
+          id?: string
+          license_plate?: string
+          name?: string
+          phone?: string
+          updated_at?: string
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           created_at: string
           fuel_type: string
           id: string
           note: string | null
+          profile_id: string | null
           queue_level: string | null
           station_id: string
           status: string
@@ -30,6 +67,7 @@ export type Database = {
           fuel_type: string
           id?: string
           note?: string | null
+          profile_id?: string | null
           queue_level?: string | null
           station_id: string
           status: string
@@ -40,12 +78,20 @@ export type Database = {
           fuel_type?: string
           id?: string
           note?: string | null
+          profile_id?: string | null
           queue_level?: string | null
           station_id?: string
           status?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "reports_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reports_station_id_fkey"
             columns: ["station_id"]
