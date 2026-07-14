@@ -224,14 +224,15 @@ export function FuelProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       const { data, error } = await supabase
-        .from("reports")
-        .select("id, station_id, fuel_type, status, queue_level, user_id, created_at")
+        .from("reports_public")
+        .select("id, station_id, fuel_type, status, queue_level, created_at")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error || !data || cancelled) return;
       const mapped: Report[] = [];
       const ids: string[] = [];
       for (const row of data) {
+        if (!row.id || !row.station_id || !row.created_at) continue;
         const ft = row.fuel_type as FuelType;
         const st = row.status as FuelStatus;
         if (!FUEL_TYPES.includes(ft) || !FUEL_STATUSES.includes(st)) continue;
@@ -252,27 +253,30 @@ export function FuelProvider({ children }: { children: ReactNode }) {
           queue,
           timestamp: ts,
           createdAt: ts,
-          deviceId: row.user_id ?? "anon",
+          deviceId: "anon",
           confirmationCount: 0,
         });
       }
 
-      // Enrich with confirmation counts sourced from report_confirmations.
+      // Enrich with aggregate confirmation counts from the public view.
       const counts = new Map<string, number>();
       if (ids.length > 0) {
         const { data: confRows, error: cErr } = await supabase
-          .from("report_confirmations")
-          .select("report_id")
+          .from("report_confirmation_counts")
+          .select("report_id, confirmation_count")
           .in("report_id", ids);
         if (!cErr && confRows) {
           for (const row of confRows) {
-            counts.set(row.report_id, (counts.get(row.report_id) ?? 0) + 1);
+            if (row.report_id && typeof row.confirmation_count === "number") {
+              counts.set(row.report_id, row.confirmation_count);
+            }
           }
         }
       }
       for (const r of mapped) {
         r.confirmationCount = counts.get(r.id) ?? 0;
       }
+
 
       if (!cancelled) setReports(mapped);
     })();
