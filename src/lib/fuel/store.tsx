@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { SEED_STATIONS, seedReports } from "./stations";
+import { supabase } from "@/integrations/supabase/client";
 import {
   FUEL_STATUSES,
   FUEL_TYPES,
