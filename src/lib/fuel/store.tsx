@@ -45,11 +45,12 @@ interface FuelStore {
     queue: QueueLength | null;
     profileId: string;
   }) => void;
-  confirmReport: (reportId: string) => ConfirmResult;
+  confirmReport: (reportId: string, profileId: string) => Promise<ConfirmResult>;
   canConfirm: (reportId: string, nowMs?: number) => boolean;
   deviceId: string;
   hydrated: boolean;
 }
+
 
 const FuelContext = createContext<FuelStore | null>(null);
 
@@ -218,7 +219,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Fetch community reports from Lovable Cloud.
+  // Fetch community reports + confirmation counts from Lovable Cloud.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -229,6 +230,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
         .limit(500);
       if (error || !data || cancelled) return;
       const mapped: Report[] = [];
+      const ids: string[] = [];
       for (const row of data) {
         const ft = row.fuel_type as FuelType;
         const st = row.status as FuelStatus;
@@ -241,6 +243,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
               ? q
               : null;
         const ts = new Date(row.created_at).getTime();
+        ids.push(row.id);
         mapped.push({
           id: row.id,
           stationId: row.station_id,
@@ -253,12 +256,31 @@ export function FuelProvider({ children }: { children: ReactNode }) {
           confirmationCount: 0,
         });
       }
+
+      // Enrich with confirmation counts sourced from report_confirmations.
+      const counts = new Map<string, number>();
+      if (ids.length > 0) {
+        const { data: confRows, error: cErr } = await supabase
+          .from("report_confirmations")
+          .select("report_id")
+          .in("report_id", ids);
+        if (!cErr && confRows) {
+          for (const row of confRows) {
+            counts.set(row.report_id, (counts.get(row.report_id) ?? 0) + 1);
+          }
+        }
+      }
+      for (const r of mapped) {
+        r.confirmationCount = counts.get(r.id) ?? 0;
+      }
+
       if (!cancelled) setReports(mapped);
     })();
     return () => {
       cancelled = true;
     };
   }, []);
+
 
 
   const addReport = useCallback<FuelStore["addReport"]>(
@@ -324,7 +346,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
   );
 
   const confirmReport = useCallback<FuelStore["confirmReport"]>(
-    (reportId) => {
+    async (reportId, profileId) => {
       const now = Date.now();
       const key = `${deviceId}:${reportId}`;
       const last = cooldownsRef.current[key] ?? 0;
@@ -332,12 +354,30 @@ export function FuelProvider({ children }: { children: ReactNode }) {
       if (elapsed < CONFIRM_COOLDOWN_MS) {
         return { ok: false, cooldownRemainingMs: CONFIRM_COOLDOWN_MS - elapsed };
       }
+
+      // Persist to Lovable Cloud. Unique (report_id, profile_id) prevents duplicates.
+      const { error } = await supabase
+        .from("report_confirmations")
+        .insert({ report_id: reportId, profile_id: profileId });
+      if (error) {
+        // 23505 = unique violation → this profile already confirmed this report.
+        const code = (error as { code?: string }).code;
+        if (code !== "23505") {
+          console.error("[confirmations] insert failed", error);
+          return { ok: false };
+        }
+        // Treat duplicate as a cooldown-style no-op.
+        cooldownsRef.current = { ...cooldownsRef.current, [key]: now };
+        safeSet(COOLDOWN_KEY, JSON.stringify(cooldownsRef.current));
+        return { ok: false, cooldownRemainingMs: CONFIRM_COOLDOWN_MS };
+      }
+
       cooldownsRef.current = { ...cooldownsRef.current, [key]: now };
       safeSet(COOLDOWN_KEY, JSON.stringify(cooldownsRef.current));
       setReports((prev) =>
         prev.map((r) =>
           r.id === reportId
-            ? { ...r, confirmationCount: r.confirmationCount + 1, timestamp: now }
+            ? { ...r, confirmationCount: r.confirmationCount + 1 }
             : r,
         ),
       );
@@ -345,6 +385,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
     },
     [deviceId],
   );
+
 
   const value = useMemo<FuelStore>(
     () => ({

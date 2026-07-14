@@ -47,7 +47,7 @@ function StationDetail() {
   const router = useRouter();
   const navigate = useNavigate();
   const { stations, reports, confirmReport, canConfirm } = useFuelStore();
-  const { requireCompleteProfile } = useSession();
+  const { profile, requireCompleteProfile } = useSession();
   const station = stations.find((s) => s.id === id);
   if (!station) throw notFound();
 
@@ -194,19 +194,26 @@ function StationDetail() {
                       <StillAccurateButton
                         reportId={latest.id}
                         canConfirm={canConfirm}
-                        confirmReport={(rid) => {
-                          let out: { ok: boolean; cooldownRemainingMs?: number } = { ok: false };
-                          requireCompleteProfile({
-                            kind: "confirm",
-                            stationId: station.id,
-                            onResume: () => {
-                              out = confirmReport(rid);
-                            },
+                        confirmReport={async (rid) => {
+                          return new Promise((resolve) => {
+                            requireCompleteProfile({
+                              kind: "confirm",
+                              stationId: station.id,
+                              onResume: async () => {
+                                if (!profile) {
+                                  resolve({ ok: false });
+                                  return;
+                                }
+                                resolve(await confirmReport(rid, profile.id));
+                              },
+                            });
+                            // If the guard blocks (no profile yet), resolve as a no-op.
+                            if (!profile) resolve({ ok: false });
                           });
-                          return out;
                         }}
                       />
                     ) : null}
+
                   </>
                 ) : null}
               </div>
@@ -265,13 +272,17 @@ function StillAccurateButton({
 }: {
   reportId: string;
   canConfirm: (id: string) => boolean;
-  confirmReport: (id: string) => { ok: boolean; cooldownRemainingMs?: number };
+  confirmReport: (id: string) => Promise<{ ok: boolean; cooldownRemainingMs?: number }>;
 }) {
   const [flash, setFlash] = useState<"confirmed" | "cooldown" | null>(null);
-  const disabled = !canConfirm(reportId) || flash === "cooldown";
+  const [busy, setBusy] = useState(false);
+  const disabled = busy || !canConfirm(reportId) || flash === "cooldown";
 
-  function onClick() {
-    const res = confirmReport(reportId);
+  async function onClick() {
+    if (busy) return;
+    setBusy(true);
+    const res = await confirmReport(reportId);
+    setBusy(false);
     if (res.ok) {
       setFlash("confirmed");
       setTimeout(() => setFlash(null), 2500);
@@ -280,6 +291,7 @@ function StillAccurateButton({
       setTimeout(() => setFlash(null), 2500);
     }
   }
+
 
   return (
     <div className="mt-2 flex items-center gap-2">

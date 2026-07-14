@@ -50,6 +50,42 @@ export type Database = {
         }
         Relationships: []
       }
+      report_confirmations: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          report_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          report_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_confirmations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_confirmations_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           created_at: string
