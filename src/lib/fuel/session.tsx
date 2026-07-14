@@ -171,7 +171,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!phoneE164) return;
 
       // Try direct insert first. If the phone already exists, fall back to
-      // the ownership-gated lookup + update RPC.
+      // the server-side ownership-gated lookup + update.
       const { data: inserted, error: insertErr } = await supabase
         .from("profiles")
         .insert({
@@ -189,26 +189,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!insertErr && inserted) {
         full = rowToProfile(inserted);
       } else {
-        // Existing profile for this phone → update via ownership-gated RPC.
-        const { data: existing } = await supabase.rpc("get_profile_by_phone", {
-          _phone: phoneE164,
-        });
-        if (existing && existing.length > 0) {
-          const { data: updated, error: updateErr } = await supabase.rpc(
-            "update_profile_by_phone",
-            {
-              _id: existing[0].id,
-              _phone: phoneE164,
-              _name: p.name,
-              _vehicle_type: p.vehicle,
-              _license_plate: p.plate,
-              _fuel_type: p.fuelType,
-              _engine_cc: p.engineCc,
-            },
-          );
-          if (!updateErr && updated && updated.length > 0) {
-            full = rowToProfile(updated[0]);
+        try {
+          const existing = await getProfileByPhoneFn({ data: { phone: phoneE164 } });
+          if (existing) {
+            const updated = await updateProfileByPhoneFn({
+              data: {
+                id: existing.id,
+                phone: phoneE164,
+                name: p.name,
+                vehicle_type: p.vehicle,
+                license_plate: p.plate,
+                fuel_type: p.fuelType,
+                engine_cc: p.engineCc,
+              },
+            });
+            if (updated) full = rowToProfile(updated);
           }
+        } catch (err) {
+          console.error("[profiles] upsert fallback failed", err);
         }
       }
 
@@ -229,21 +227,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback<SessionCtx["updateProfile"]>(
     async (p) => {
       if (!phoneE164 || !profile) return;
-      const { data, error } = await supabase.rpc("update_profile_by_phone", {
-        _id: profile.id,
-        _phone: phoneE164,
-        _name: p.name,
-        _vehicle_type: p.vehicle,
-        _license_plate: p.plate,
-        _fuel_type: p.fuelType,
-        _engine_cc: p.engineCc,
-      });
-      if (error || !data || data.length === 0) {
-        console.error("[profiles] update failed", error);
-        return;
+      try {
+        const updated = await updateProfileByPhoneFn({
+          data: {
+            id: profile.id,
+            phone: phoneE164,
+            name: p.name,
+            vehicle_type: p.vehicle,
+            license_plate: p.plate,
+            fuel_type: p.fuelType,
+            engine_cc: p.engineCc,
+          },
+        });
+        if (!updated) {
+          console.error("[profiles] update returned no row");
+          return;
+        }
+        setProfile(rowToProfile(updated));
+        setStep("view");
+      } catch (err) {
+        console.error("[profiles] update failed", err);
       }
-      setProfile(rowToProfile(data[0]));
-      setStep("view");
     },
     [phoneE164, profile],
   );
