@@ -14,7 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      station_fuels: {
+        Row: {
+          created_at: string
+          fuel_type: string
+          id: string
+          is_offered: boolean
+          station_id: string
+        }
+        Insert: {
+          created_at?: string
+          fuel_type: string
+          id?: string
+          is_offered?: boolean
+          station_id: string
+        }
+        Update: {
+          created_at?: string
+          fuel_type?: string
+          id?: string
+          is_offered?: boolean
+          station_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "station_fuels_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stations: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          name: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          id: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          name: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

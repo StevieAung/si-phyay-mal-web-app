@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { SEED_STATIONS, seedReports } from "./stations";
+import { supabase } from "@/integrations/supabase/client";
 import {
   FUEL_STATUSES,
   FUEL_TYPES,
@@ -166,7 +167,7 @@ function loadOrCreateDeviceId(): string {
 // ---------- Provider ----------
 
 export function FuelProvider({ children }: { children: ReactNode }) {
-  const [stations] = useState<Station[]>(SEED_STATIONS);
+  const [stations, setStations] = useState<Station[]>(SEED_STATIONS);
   // Start with seed data so SSR and first client render match.
   const [reports, setReports] = useState<Report[]>(() => seedReports());
   const [deviceId, setDeviceId] = useState<string>("dev-ssr");
@@ -180,6 +181,54 @@ export function FuelProvider({ children }: { children: ReactNode }) {
     const stored = loadReports();
     if (stored && stored.length > 0) setReports(stored);
     setHydrated(true);
+  }, []);
+
+  // Fetch stations from Lovable Cloud; fall back to seed on error.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: stationRows, error: sErr } = await supabase
+        .from("stations")
+        .select("id, name, address, latitude, longitude")
+        .eq("is_active", true);
+      if (sErr || !stationRows || cancelled) return;
+
+      const { data: fuelRows, error: fErr } = await supabase
+        .from("station_fuels")
+        .select("station_id, fuel_type")
+        .eq("is_offered", true);
+      if (fErr || cancelled) return;
+
+      const fuelsByStation = new Map<string, FuelType[]>();
+      for (const row of fuelRows ?? []) {
+        const ft = row.fuel_type as FuelType;
+        if (!FUEL_TYPES.includes(ft)) continue;
+        const arr = fuelsByStation.get(row.station_id) ?? [];
+        arr.push(ft);
+        fuelsByStation.set(row.station_id, arr);
+      }
+
+      // Preserve UI-only display metadata (nameEn/township) from seed lookup.
+      const seedMeta = new Map(SEED_STATIONS.map((s) => [s.id, s]));
+      const merged: Station[] = stationRows.map((r) => {
+        const meta = seedMeta.get(r.id);
+        return {
+          id: r.id,
+          name: r.name,
+          nameEn: meta?.nameEn ?? r.name,
+          address: r.address,
+          township: meta?.township ?? "",
+          lat: r.latitude,
+          lng: r.longitude,
+          offeredFuels: fuelsByStation.get(r.id) ?? meta?.offeredFuels ?? [],
+        };
+      });
+
+      if (!cancelled && merged.length > 0) setStations(merged);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Persist reports after hydration.
