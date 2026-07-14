@@ -10,6 +10,7 @@ import type { PlateParity } from "./plate";
 
 export type SheetStep = "phone" | "profile" | "view";
 export type VehicleType = "ကား" | "မော်တော်ဆိုင်ကယ်";
+export type FuelPref = "92" | "95" | "Diesel";
 
 export interface Profile {
   name: string;
@@ -17,7 +18,10 @@ export interface Profile {
   vehicle: VehicleType;
   plate: string;
   parity: PlateParity;
+  fuelType: FuelPref;
+  engineCc: number;
 }
+
 
 export type PendingIntentKind = "directions" | "report" | "confirm";
 
