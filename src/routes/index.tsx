@@ -24,6 +24,9 @@ import { MANDALAY_CENTER } from "@/lib/fuel/stations";
 import { useSession } from "@/lib/fuel/session";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { maskPhone } from "@/lib/fuel/phone";
+import { useFillHistory } from "@/lib/fuel/fillHistory";
+import { LogFillModal } from "@/components/fuel/LogFillModal";
+import { CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: DiscoverPage,
@@ -60,7 +63,16 @@ function DiscoverPage() {
   const [showExplainer, setShowExplainer] = useState(false);
   const [explainerDismissed, setExplainerDismissed] = useState(false);
   const geo = useGeolocation();
-  const { profile, openSheet } = useSession();
+  const { profile, openSheet, requireCompleteProfile } = useSession();
+  const { entries: fills, addFill } = useFillHistory();
+  const [logOpen, setLogOpen] = useState(false);
+
+  function onTapLogFill() {
+    requireCompleteProfile({
+      kind: "confirm",
+      onResume: () => setLogOpen(true),
+    });
+  }
 
   // Show the in-app explanation on first Discover visit only.
   useEffect(() => {
@@ -283,10 +295,76 @@ function DiscoverPage() {
                   ))
                 )}
               </div>
+
+              {/* Log-fill CTA */}
+              <button
+                type="button"
+                onClick={onTapLogFill}
+                className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition hover:brightness-105"
+              >
+                <CheckCircle2 className="h-4 w-4" aria-hidden />
+                ဒီနေ့ ဆီထည့်ပြီးပြီလား ခင်ဗျာ
+              </button>
+              {!profile && (
+                <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+                  မှတ်တမ်းတင်ရန် အကောင့်ဝင်ရန်လိုအပ်သည်
+                </p>
+              )}
+
+              {/* Fill history */}
+              {profile && fills.length > 0 && (
+                <div className="mt-5">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    ကျွန်ုပ်၏ ဆီဖြည့်မှတ်တမ်း
+                  </h3>
+                  <ul className="mt-2 space-y-2">
+                    {fills.slice(0, 5).map((f) => (
+                      <li
+                        key={f.id}
+                        className="rounded-2xl border border-border bg-card p-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-muted-foreground">
+                            {new Date(f.ts).toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                            {f.fuelType}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm font-medium text-foreground">
+                          {f.stationName}
+                        </p>
+                        <div className="mt-1 flex items-center justify-between text-[12px]">
+                          <span className="text-muted-foreground">{f.liters} L</span>
+                          <span className="font-semibold text-primary">
+                            {f.total.toLocaleString("en-US")} ကျပ်
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         </section>
       </main>
+
+      {logOpen && profile && (
+        <LogFillModal
+          stations={stations}
+          defaultFuel={profile.fuelType}
+          onClose={() => setLogOpen(false)}
+          onSubmit={(entry) => {
+            addFill(entry);
+            setLogOpen(false);
+          }}
+        />
+      )}
 
       {showExplainer && geo.status === "idle" && (
         <LocationExplainer
