@@ -24,6 +24,9 @@ import { MANDALAY_CENTER } from "@/lib/fuel/stations";
 import { useSession } from "@/lib/fuel/session";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { maskPhone } from "@/lib/fuel/phone";
+import { useFillHistory } from "@/lib/fuel/fillHistory";
+import { LogFillModal } from "@/components/fuel/LogFillModal";
+import { CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: DiscoverPage,
