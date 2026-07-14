@@ -56,7 +56,7 @@ function DiscoverPage() {
   const [fuel, setFuel] = useState<FuelType | "All">("All");
   const [statusFilter, setStatusFilter] = useState<FuelStatus | "All">("All");
   const [q, setQ] = useState("");
-  const [radius, setRadius] = useState<Radius>(5);
+  const [radius, setRadius] = useState<Radius>(2);
   const [showExplainer, setShowExplainer] = useState(false);
   const [explainerDismissed, setExplainerDismissed] = useState(false);
   const geo = useGeolocation();
