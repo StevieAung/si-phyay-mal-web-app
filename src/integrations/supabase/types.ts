@@ -210,7 +210,7 @@ export type Database = {
     Views: {
       report_confirmation_counts: {
         Row: {
-          confirmation_count: number | null
+          count: number | null
           report_id: string | null
         }
         Relationships: [
