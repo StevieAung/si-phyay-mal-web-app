@@ -88,7 +88,8 @@ function rowToProfile(row: {
   fuel_type: string;
   engine_cc: number;
 }): Profile {
-  const parity = parsePlate(row.license_plate).parity ?? "စုံ";
+  const parsed = parsePlate(row.license_plate);
+  const parity: PlateParity = parsed.ok ? parsed.parity : "စုံ";
   return {
     id: row.id,
     name: row.name,
