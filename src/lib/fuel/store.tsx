@@ -217,11 +217,48 @@ export function FuelProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Persist reports after hydration.
+  // Fetch community reports from Lovable Cloud.
   useEffect(() => {
-    if (!hydrated) return;
-    safeSet(REPORTS_KEY, JSON.stringify(reports));
-  }, [reports, hydrated]);
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("reports")
+        .select("id, station_id, fuel_type, status, queue_level, user_id, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error || !data || cancelled) return;
+      const mapped: Report[] = [];
+      for (const row of data) {
+        const ft = row.fuel_type as FuelType;
+        const st = row.status as FuelStatus;
+        if (!FUEL_TYPES.includes(ft) || !FUEL_STATUSES.includes(st)) continue;
+        const q = row.queue_level as QueueLength | null;
+        const queue =
+          st === "Closed" || st === "Sold Out"
+            ? null
+            : q && QUEUE_LENGTHS.includes(q)
+              ? q
+              : null;
+        const ts = new Date(row.created_at).getTime();
+        mapped.push({
+          id: row.id,
+          stationId: row.station_id,
+          fuelType: ft,
+          status: st,
+          queue,
+          timestamp: ts,
+          createdAt: ts,
+          deviceId: row.user_id ?? "anon",
+          confirmationCount: 0,
+        });
+      }
+      if (!cancelled) setReports(mapped);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
 
   const addReport = useCallback<FuelStore["addReport"]>(
     ({ stationId, fuelType, status, queue }) => {
