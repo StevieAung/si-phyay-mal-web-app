@@ -123,24 +123,8 @@ function safeRemove(key: string): void {
   }
 }
 
-function loadReports(): Report[] | null {
-  const raw = safeGet(REPORTS_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    const cleaned: Report[] = [];
-    for (const item of parsed) {
-      const r = normalizeReport(item);
-      if (r) cleaned.push(r);
-    }
-    return cleaned;
-  } catch {
-    // Invalid JSON — clear the bad blob so we don't keep failing.
-    safeRemove(REPORTS_KEY);
-    return null;
-  }
-}
+// Reports are no longer read from localStorage; they come from Supabase.
+
 
 function loadCooldowns(): Record<string, number> {
   const raw = safeGet(COOLDOWN_KEY);
