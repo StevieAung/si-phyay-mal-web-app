@@ -443,7 +443,7 @@ function LocationExplainer({
       role="dialog"
       aria-modal="true"
       aria-label="Location permission"
-      className="fixed inset-0 z-[999] flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
     >
       <div className="w-full max-w-md rounded-t-3xl border border-border bg-card p-5 shadow-2xl sm:rounded-3xl">
         <div className="mb-2 flex items-center justify-between gap-3">
