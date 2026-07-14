@@ -346,7 +346,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
   );
 
   const confirmReport = useCallback<FuelStore["confirmReport"]>(
-    (reportId) => {
+    async (reportId, profileId) => {
       const now = Date.now();
       const key = `${deviceId}:${reportId}`;
       const last = cooldownsRef.current[key] ?? 0;
@@ -354,12 +354,30 @@ export function FuelProvider({ children }: { children: ReactNode }) {
       if (elapsed < CONFIRM_COOLDOWN_MS) {
         return { ok: false, cooldownRemainingMs: CONFIRM_COOLDOWN_MS - elapsed };
       }
+
+      // Persist to Lovable Cloud. Unique (report_id, profile_id) prevents duplicates.
+      const { error } = await supabase
+        .from("report_confirmations")
+        .insert({ report_id: reportId, profile_id: profileId });
+      if (error) {
+        // 23505 = unique violation → this profile already confirmed this report.
+        const code = (error as { code?: string }).code;
+        if (code !== "23505") {
+          console.error("[confirmations] insert failed", error);
+          return { ok: false };
+        }
+        // Treat duplicate as a cooldown-style no-op.
+        cooldownsRef.current = { ...cooldownsRef.current, [key]: now };
+        safeSet(COOLDOWN_KEY, JSON.stringify(cooldownsRef.current));
+        return { ok: false, cooldownRemainingMs: CONFIRM_COOLDOWN_MS };
+      }
+
       cooldownsRef.current = { ...cooldownsRef.current, [key]: now };
       safeSet(COOLDOWN_KEY, JSON.stringify(cooldownsRef.current));
       setReports((prev) =>
         prev.map((r) =>
           r.id === reportId
-            ? { ...r, confirmationCount: r.confirmationCount + 1, timestamp: now }
+            ? { ...r, confirmationCount: r.confirmationCount + 1 }
             : r,
         ),
       );
@@ -367,6 +385,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
     },
     [deviceId],
   );
+
 
   const value = useMemo<FuelStore>(
     () => ({
