@@ -1,3 +1,49 @@
+// SSR shim: leaflet / @react-leaflet/core touch `window`, `document`, and
+// `navigator` at module top-level. They don't render on the server (map is
+// gated behind a `mounted` flag), but importing the module must not crash.
+// Inline here so Vite doesn't tree-shake a side-effect-only import.
+{
+  const g = globalThis as unknown as Record<string, unknown>;
+  if (typeof g.window === "undefined") {
+    const noop = () => {};
+    const win: Record<string, unknown> = {
+      setTimeout: (fn: () => void, ms?: number) => setTimeout(fn, ms),
+      clearTimeout: (id: unknown) => clearTimeout(id as number),
+      setInterval: (fn: () => void, ms?: number) => setInterval(fn, ms),
+      clearInterval: (id: unknown) => clearInterval(id as number),
+      requestAnimationFrame: (fn: () => void) => setTimeout(fn, 16) as unknown as number,
+      cancelAnimationFrame: (id: unknown) => clearTimeout(id as number),
+      addEventListener: noop,
+      removeEventListener: noop,
+      location: { href: "", hostname: "", pathname: "/", search: "", hash: "" },
+      navigator: { userAgent: "", platform: "" },
+      devicePixelRatio: 1,
+      screen: { deviceXDPI: 1, logicalXDPI: 1, width: 0, height: 0 },
+      L_DISABLE_3D: true,
+    };
+    g.window = win;
+  }
+  if (typeof g.document === "undefined") {
+    const noop = () => {};
+    const doc = {
+      createElement: () => ({ style: {}, setAttribute: noop, appendChild: noop }),
+      createElementNS: () => ({ style: {}, setAttribute: noop, appendChild: noop }),
+      documentElement: { style: {}, className: "" },
+      body: { appendChild: noop, removeChild: noop },
+      addEventListener: noop,
+      removeEventListener: noop,
+      getElementsByTagName: () => [],
+    };
+    g.document = doc;
+    (g.window as Record<string, unknown>).document = doc;
+  }
+  if (typeof g.navigator === "undefined") {
+    const nav = { userAgent: "", platform: "" };
+    g.navigator = nav;
+    (g.window as Record<string, unknown>).navigator = nav;
+  }
+}
+
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
