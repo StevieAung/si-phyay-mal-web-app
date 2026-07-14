@@ -263,12 +263,12 @@ export function FuelProvider({ children }: { children: ReactNode }) {
       if (ids.length > 0) {
         const { data: confRows, error: cErr } = await supabase
           .from("report_confirmation_counts")
-          .select("report_id, confirmation_count")
+          .select("report_id, count")
           .in("report_id", ids);
         if (!cErr && confRows) {
           for (const row of confRows) {
-            if (row.report_id && typeof row.confirmation_count === "number") {
-              counts.set(row.report_id, row.confirmation_count);
+            if (row.report_id && typeof row.count === "number") {
+              counts.set(row.report_id, row.count);
             }
           }
         }
