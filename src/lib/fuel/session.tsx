@@ -8,6 +8,11 @@ import {
   type ReactNode,
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getProfileByIdFn,
+  getProfileByPhoneFn,
+  updateProfileByPhoneFn,
+} from "@/lib/profile.functions";
 import type { PlateParity } from "./plate";
 import { parsePlate } from "./plate";
 
