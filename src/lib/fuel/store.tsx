@@ -22,10 +22,13 @@ import {
 } from "./types";
 
 const STORAGE_VERSION = 1;
-const REPORTS_KEY = `sfm:v${STORAGE_VERSION}:reports`;
+// Note: The legacy REPORTS_KEY (`sfm:v1:reports`) is intentionally NOT read or
+// written anymore — reports live in Lovable Cloud (Supabase) as of Phase 2.
+// Existing localStorage entries are left in place and simply ignored.
 const DEVICE_KEY = `sfm:v${STORAGE_VERSION}:deviceId`;
 const COOLDOWN_KEY = `sfm:v${STORAGE_VERSION}:confirmCooldown`;
 const CONFIRM_COOLDOWN_MS = 60_000; // 60s per (device, report)
+
 
 export interface ConfirmResult {
   ok: boolean;
