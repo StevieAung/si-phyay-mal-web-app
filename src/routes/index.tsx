@@ -63,7 +63,16 @@ function DiscoverPage() {
   const [showExplainer, setShowExplainer] = useState(false);
   const [explainerDismissed, setExplainerDismissed] = useState(false);
   const geo = useGeolocation();
-  const { profile, openSheet } = useSession();
+  const { profile, openSheet, requireCompleteProfile } = useSession();
+  const { entries: fills, addFill } = useFillHistory();
+  const [logOpen, setLogOpen] = useState(false);
+
+  function onTapLogFill() {
+    requireCompleteProfile({
+      kind: "confirm",
+      onResume: () => setLogOpen(true),
+    });
+  }
 
   // Show the in-app explanation on first Discover visit only.
   useEffect(() => {
