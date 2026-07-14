@@ -45,11 +45,12 @@ interface FuelStore {
     queue: QueueLength | null;
     profileId: string;
   }) => void;
-  confirmReport: (reportId: string) => ConfirmResult;
+  confirmReport: (reportId: string, profileId: string) => Promise<ConfirmResult>;
   canConfirm: (reportId: string, nowMs?: number) => boolean;
   deviceId: string;
   hydrated: boolean;
 }
+
 
 const FuelContext = createContext<FuelStore | null>(null);
 
