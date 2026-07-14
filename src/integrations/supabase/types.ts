@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      reports: {
+        Row: {
+          created_at: string
+          fuel_type: string
+          id: string
+          note: string | null
+          queue_level: string | null
+          station_id: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          fuel_type: string
+          id?: string
+          note?: string | null
+          queue_level?: string | null
+          station_id: string
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          fuel_type?: string
+          id?: string
+          note?: string | null
+          queue_level?: string | null
+          station_id?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       station_fuels: {
         Row: {
           created_at: string

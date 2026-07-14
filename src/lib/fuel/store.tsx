@@ -22,10 +22,13 @@ import {
 } from "./types";
 
 const STORAGE_VERSION = 1;
-const REPORTS_KEY = `sfm:v${STORAGE_VERSION}:reports`;
+// Note: The legacy REPORTS_KEY (`sfm:v1:reports`) is intentionally NOT read or
+// written anymore — reports live in Lovable Cloud (Supabase) as of Phase 2.
+// Existing localStorage entries are left in place and simply ignored.
 const DEVICE_KEY = `sfm:v${STORAGE_VERSION}:deviceId`;
 const COOLDOWN_KEY = `sfm:v${STORAGE_VERSION}:confirmCooldown`;
 const CONFIRM_COOLDOWN_MS = 60_000; // 60s per (device, report)
+
 
 export interface ConfirmResult {
   ok: boolean;
@@ -120,24 +123,8 @@ function safeRemove(key: string): void {
   }
 }
 
-function loadReports(): Report[] | null {
-  const raw = safeGet(REPORTS_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    const cleaned: Report[] = [];
-    for (const item of parsed) {
-      const r = normalizeReport(item);
-      if (r) cleaned.push(r);
-    }
-    return cleaned;
-  } catch {
-    // Invalid JSON — clear the bad blob so we don't keep failing.
-    safeRemove(REPORTS_KEY);
-    return null;
-  }
-}
+// Reports are no longer read from localStorage; they come from Supabase.
+
 
 function loadCooldowns(): Record<string, number> {
   const raw = safeGet(COOLDOWN_KEY);
@@ -174,14 +161,13 @@ export function FuelProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const cooldownsRef = useRef<Record<string, number>>({});
 
-  // Client-only hydration from localStorage.
+  // Client-only hydration for device id + confirm cooldowns.
   useEffect(() => {
     setDeviceId(loadOrCreateDeviceId());
     cooldownsRef.current = loadCooldowns();
-    const stored = loadReports();
-    if (stored && stored.length > 0) setReports(stored);
     setHydrated(true);
   }, []);
+
 
   // Fetch stations from Lovable Cloud; fall back to seed on error.
   useEffect(() => {
@@ -231,30 +217,100 @@ export function FuelProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Persist reports after hydration.
+  // Fetch community reports from Lovable Cloud.
   useEffect(() => {
-    if (!hydrated) return;
-    safeSet(REPORTS_KEY, JSON.stringify(reports));
-  }, [reports, hydrated]);
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("reports")
+        .select("id, station_id, fuel_type, status, queue_level, user_id, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error || !data || cancelled) return;
+      const mapped: Report[] = [];
+      for (const row of data) {
+        const ft = row.fuel_type as FuelType;
+        const st = row.status as FuelStatus;
+        if (!FUEL_TYPES.includes(ft) || !FUEL_STATUSES.includes(st)) continue;
+        const q = row.queue_level as QueueLength | null;
+        const queue =
+          st === "Closed" || st === "Sold Out"
+            ? null
+            : q && QUEUE_LENGTHS.includes(q)
+              ? q
+              : null;
+        const ts = new Date(row.created_at).getTime();
+        mapped.push({
+          id: row.id,
+          stationId: row.station_id,
+          fuelType: ft,
+          status: st,
+          queue,
+          timestamp: ts,
+          createdAt: ts,
+          deviceId: row.user_id ?? "anon",
+          confirmationCount: 0,
+        });
+      }
+      if (!cancelled) setReports(mapped);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
 
   const addReport = useCallback<FuelStore["addReport"]>(
     ({ stationId, fuelType, status, queue }) => {
       const now = Date.now();
-      const newReport: Report = {
-        id: randomId("r"),
+      const effectiveQueue =
+        status === "Closed" || status === "Sold Out" ? null : queue;
+      const tempId = randomId("r");
+      // Optimistic insert so the UI updates immediately.
+      const optimistic: Report = {
+        id: tempId,
         stationId,
         fuelType,
         status,
-        queue: status === "Closed" || status === "Sold Out" ? null : queue,
+        queue: effectiveQueue,
         timestamp: now,
         createdAt: now,
         deviceId,
         confirmationCount: 0,
       };
-      setReports((prev) => [newReport, ...prev]);
+      setReports((prev) => [optimistic, ...prev]);
+
+      // Persist to Lovable Cloud. user_id stays null until auth ships (Phase 3).
+      (async () => {
+        const { data, error } = await supabase
+          .from("reports")
+          .insert({
+            station_id: stationId,
+            fuel_type: fuelType,
+            status,
+            queue_level: effectiveQueue,
+          })
+          .select("id, created_at")
+          .single();
+        if (error || !data) {
+          // Roll back the optimistic entry on failure.
+          console.error("[reports] insert failed", error);
+          setReports((prev) => prev.filter((r) => r.id !== tempId));
+          return;
+        }
+        const ts = new Date(data.created_at).getTime();
+        setReports((prev) =>
+          prev.map((r) =>
+            r.id === tempId
+              ? { ...r, id: data.id, timestamp: ts, createdAt: ts }
+              : r,
+          ),
+        );
+      })();
     },
     [deviceId],
   );
+
 
   const canConfirm = useCallback(
     (reportId: string, nowMs: number = Date.now()) => {
