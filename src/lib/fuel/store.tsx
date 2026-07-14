@@ -219,7 +219,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Fetch community reports from Lovable Cloud.
+  // Fetch community reports + confirmation counts from Lovable Cloud.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -230,6 +230,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
         .limit(500);
       if (error || !data || cancelled) return;
       const mapped: Report[] = [];
+      const ids: string[] = [];
       for (const row of data) {
         const ft = row.fuel_type as FuelType;
         const st = row.status as FuelStatus;
@@ -242,6 +243,7 @@ export function FuelProvider({ children }: { children: ReactNode }) {
               ? q
               : null;
         const ts = new Date(row.created_at).getTime();
+        ids.push(row.id);
         mapped.push({
           id: row.id,
           stationId: row.station_id,
@@ -254,12 +256,31 @@ export function FuelProvider({ children }: { children: ReactNode }) {
           confirmationCount: 0,
         });
       }
+
+      // Enrich with confirmation counts sourced from report_confirmations.
+      const counts = new Map<string, number>();
+      if (ids.length > 0) {
+        const { data: confRows, error: cErr } = await supabase
+          .from("report_confirmations")
+          .select("report_id")
+          .in("report_id", ids);
+        if (!cErr && confRows) {
+          for (const row of confRows) {
+            counts.set(row.report_id, (counts.get(row.report_id) ?? 0) + 1);
+          }
+        }
+      }
+      for (const r of mapped) {
+        r.confirmationCount = counts.get(r.id) ?? 0;
+      }
+
       if (!cancelled) setReports(mapped);
     })();
     return () => {
       cancelled = true;
     };
   }, []);
+
 
 
   const addReport = useCallback<FuelStore["addReport"]>(
