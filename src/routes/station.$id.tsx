@@ -272,13 +272,17 @@ function StillAccurateButton({
 }: {
   reportId: string;
   canConfirm: (id: string) => boolean;
-  confirmReport: (id: string) => { ok: boolean; cooldownRemainingMs?: number };
+  confirmReport: (id: string) => Promise<{ ok: boolean; cooldownRemainingMs?: number }>;
 }) {
   const [flash, setFlash] = useState<"confirmed" | "cooldown" | null>(null);
-  const disabled = !canConfirm(reportId) || flash === "cooldown";
+  const [busy, setBusy] = useState(false);
+  const disabled = busy || !canConfirm(reportId) || flash === "cooldown";
 
-  function onClick() {
-    const res = confirmReport(reportId);
+  async function onClick() {
+    if (busy) return;
+    setBusy(true);
+    const res = await confirmReport(reportId);
+    setBusy(false);
     if (res.ok) {
       setFlash("confirmed");
       setTimeout(() => setFlash(null), 2500);
@@ -287,6 +291,7 @@ function StillAccurateButton({
       setTimeout(() => setFlash(null), 2500);
     }
   }
+
 
   return (
     <div className="mt-2 flex items-center gap-2">
