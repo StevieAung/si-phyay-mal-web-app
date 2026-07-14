@@ -12,4 +12,24 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          // Keep leaflet / @react-leaflet in their own chunk so React isn't co-bundled with them.
+          // Otherwise any route that imports React ends up evaluating leaflet's IIFE (which
+          // touches `window`) at SSR module-load time → 500 on the published site.
+          manualChunks(id: string) {
+            if (
+              id.includes("node_modules/leaflet") ||
+              id.includes("node_modules/@react-leaflet") ||
+              id.includes("node_modules/react-leaflet")
+            ) {
+              return "leaflet";
+            }
+          },
+        },
+      },
+    },
+  },
 });
