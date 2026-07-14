@@ -120,11 +120,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!id) return;
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase.rpc("get_profile_by_id", { _id: id });
-      if (cancelled || error || !data || data.length === 0) return;
-      const p = rowToProfile(data[0]);
-      setProfile(p);
-      setPhoneState(p.phoneE164);
+      try {
+        const row = await getProfileByIdFn({ data: { id } });
+        if (cancelled || !row) return;
+        const p = rowToProfile(row);
+        setProfile(p);
+        setPhoneState(p.phoneE164);
+      } catch {
+        /* ignore */
+      }
     })();
     return () => {
       cancelled = true;
