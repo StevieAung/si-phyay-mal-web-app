@@ -194,19 +194,26 @@ function StationDetail() {
                       <StillAccurateButton
                         reportId={latest.id}
                         canConfirm={canConfirm}
-                        confirmReport={(rid) => {
-                          let out: { ok: boolean; cooldownRemainingMs?: number } = { ok: false };
-                          requireCompleteProfile({
-                            kind: "confirm",
-                            stationId: station.id,
-                            onResume: () => {
-                              out = confirmReport(rid);
-                            },
+                        confirmReport={async (rid) => {
+                          return new Promise((resolve) => {
+                            requireCompleteProfile({
+                              kind: "confirm",
+                              stationId: station.id,
+                              onResume: async () => {
+                                if (!profile) {
+                                  resolve({ ok: false });
+                                  return;
+                                }
+                                resolve(await confirmReport(rid, profile.id));
+                              },
+                            });
+                            // If the guard blocks (no profile yet), resolve as a no-op.
+                            if (!profile) resolve({ ok: false });
                           });
-                          return out;
                         }}
                       />
                     ) : null}
+
                   </>
                 ) : null}
               </div>
