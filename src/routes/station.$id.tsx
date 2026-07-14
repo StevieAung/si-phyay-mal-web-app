@@ -47,7 +47,7 @@ function StationDetail() {
   const router = useRouter();
   const navigate = useNavigate();
   const { stations, reports, confirmReport, canConfirm } = useFuelStore();
-  const { requireCompleteProfile } = useSession();
+  const { profile, requireCompleteProfile } = useSession();
   const station = stations.find((s) => s.id === id);
   if (!station) throw notFound();
 
