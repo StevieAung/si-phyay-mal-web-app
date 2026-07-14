@@ -224,14 +224,15 @@ export function FuelProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       const { data, error } = await supabase
-        .from("reports")
-        .select("id, station_id, fuel_type, status, queue_level, user_id, created_at")
+        .from("reports_public")
+        .select("id, station_id, fuel_type, status, queue_level, created_at")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error || !data || cancelled) return;
       const mapped: Report[] = [];
       const ids: string[] = [];
       for (const row of data) {
+
         const ft = row.fuel_type as FuelType;
         const st = row.status as FuelStatus;
         if (!FUEL_TYPES.includes(ft) || !FUEL_STATUSES.includes(st)) continue;
