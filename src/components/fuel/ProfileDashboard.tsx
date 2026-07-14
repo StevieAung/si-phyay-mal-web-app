@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { X, Upload, Eye, RefreshCw, QrCode, Fuel, Calculator, History, Bike, Car } from "lucide-react";
 import type { Profile } from "@/lib/fuel/session";
+import { computeAllowance } from "@/lib/fuel/allowance";
 
 type FuelPermission = "allowed" | "blocked";
 
@@ -24,19 +25,29 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
     e.target.value = "";
   }
 
-  // ---------- Permission (demo toggle) ----------
+  // ---------- Permission (demo, derived from parity for mock) ----------
   const [permission, setPermission] = useState<FuelPermission>("allowed");
+
+  // ---------- Allowance from Engine CC ----------
+  const isMoto = profile.vehicle === "မော်တော်ဆိုင်ကယ်";
+  const allowance = useMemo(
+    () => computeAllowance(profile.vehicle, profile.engineCc),
+    [profile.vehicle, profile.engineCc],
+  );
+
+  // ---------- Mock weekly usage ----------
+  const usedFills = 1;
+  const usedLiters = 10;
+  const remainingLiters = Math.max(0, allowance.liters - usedLiters);
 
   // ---------- Fuel calculator ----------
   const [pricePerL, setPricePerL] = useState<string>("3150");
-  const [liters, setLiters] = useState<string>("10");
+  const [liters, setLiters] = useState<string>(String(allowance.liters));
   const total = useMemo(() => {
     const p = Number(pricePerL) || 0;
     const l = Number(liters) || 0;
     return p * l;
   }, [pricePerL, liters]);
-
-  const isMoto = profile.vehicle === "မော်တော်ဆိုင်ကယ်";
 
   return (
     <div className="mt-4 space-y-3">
@@ -102,43 +113,46 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
         )}
       </section>
 
-      {/* ---------- Permission Card ---------- */}
-      <section className="rounded-2xl border border-border bg-background/60 p-3">
-        <header className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-foreground">ဆီဖြည့်ခွင့်</h3>
-          <button
-            type="button"
-            onClick={() => setPermission((p) => (p === "allowed" ? "blocked" : "allowed"))}
-            className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] text-muted-foreground"
-          >
-            Demo toggle
-          </button>
-        </header>
-        {permission === "allowed" ? (
-          <p className="rounded-xl bg-available/15 px-3 py-2 text-sm font-medium text-available">
-            🟢 ယနေ့ ဆီဖြည့်နိုင်ပါသည်
+      {/* ---------- Parity + Fuel Permission (side-by-side) ---------- */}
+      <section className="grid grid-cols-2 gap-2">
+        <div className="rounded-2xl border border-border bg-background/60 p-3">
+          <p className="text-[11px] text-muted-foreground">စုံ / မ</p>
+          <p className="mt-1">
+            <span
+              className={`inline-block rounded-full px-2.5 py-0.5 text-sm font-bold ${
+                profile.parity === "စုံ"
+                  ? "bg-available/15 text-available"
+                  : "bg-primary/15 text-primary"
+              }`}
+            >
+              {profile.parity}
+            </span>
           </p>
-        ) : (
-          <p className="rounded-xl bg-soldout/15 px-3 py-2 text-sm font-medium text-soldout">
-            🔴 ယနေ့ ဆီဖြည့်၍မရပါ
-          </p>
-        )}
+        </div>
+        <div className="rounded-2xl border border-border bg-background/60 p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-muted-foreground">ဆီဖြည့်ခွင့်</p>
+            <button
+              type="button"
+              onClick={() => setPermission((p) => (p === "allowed" ? "blocked" : "allowed"))}
+              className="rounded-full border border-border bg-background px-1.5 py-0.5 text-[9px] text-muted-foreground"
+            >
+              toggle
+            </button>
+          </div>
+          {permission === "allowed" ? (
+            <p className="mt-1 text-[12px] font-semibold text-available">
+              🟢 ယနေ့ ဆီဖြည့်နိုင်ပါသည်
+            </p>
+          ) : (
+            <p className="mt-1 text-[12px] font-semibold text-soldout">
+              🔴 ယနေ့ ဆီဖြည့်၍မရပါ
+            </p>
+          )}
+        </div>
       </section>
 
-      {/* ---------- Weekly Quota ---------- */}
-      <section className="rounded-2xl border border-border bg-background/60 p-3">
-        <header className="mb-2 flex items-center gap-1.5">
-          <Fuel className="h-4 w-4 text-primary" aria-hidden />
-          <h3 className="text-sm font-bold text-foreground">ဒီအပတ် ဆီဖြည့်မှု</h3>
-        </header>
-        <dl className="grid grid-cols-3 gap-2 text-[12px]">
-          <QuotaCell label="ဆီဖြည့်" value="1 / 2 ကြိမ်" />
-          <QuotaCell label="ဖြည့်ပြီး" value="20 L" />
-          <QuotaCell label="ကျန်ရှိ" value="20 L" />
-        </dl>
-      </section>
-
-      {/* ---------- Vehicle quota reference ---------- */}
+      {/* ---------- Allowance from Engine CC ---------- */}
       <section className="rounded-2xl border border-border bg-background/60 p-3">
         <header className="mb-2 flex items-center gap-1.5">
           {isMoto ? (
@@ -146,19 +160,26 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
           ) : (
             <Car className="h-4 w-4 text-primary" aria-hidden />
           )}
-          <h3 className="text-sm font-bold text-foreground">ယာဉ်အလိုက် ခွင့်ပြုပမာဏ</h3>
+          <h3 className="text-sm font-bold text-foreground">ယာဉ်ခွင့်ပြုပမာဏ</h3>
         </header>
-        {isMoto ? (
-          <ul className="space-y-1 text-[12px] text-foreground">
-            <QuotaRow left="မော်တော်ဆိုင်ကယ်" right="တစ်ပတ် ၂ ကြိမ် · 8 L" highlight />
-          </ul>
-        ) : (
-          <ul className="space-y-1 text-[12px] text-foreground">
-            <QuotaRow left="2000 CC အထိ" right="35 L" />
-            <QuotaRow left="2000–3000 CC" right="40 L" />
-            <QuotaRow left="3000 CC အထက်" right="45 L" />
-          </ul>
-        )}
+        <dl className="grid grid-cols-3 gap-2 text-[12px]">
+          <QuotaCell label="Engine" value={`${profile.engineCc} CC`} />
+          <QuotaCell label="Weekly Limit" value={`${allowance.liters} L`} />
+          <QuotaCell label="Fill Limit" value={`${allowance.fills} ကြိမ် / ပတ်`} />
+        </dl>
+      </section>
+
+      {/* ---------- Weekly usage ---------- */}
+      <section className="rounded-2xl border border-border bg-background/60 p-3">
+        <header className="mb-2 flex items-center gap-1.5">
+          <Fuel className="h-4 w-4 text-primary" aria-hidden />
+          <h3 className="text-sm font-bold text-foreground">ဒီအပတ် ဆီဖြည့်မှု</h3>
+        </header>
+        <dl className="grid grid-cols-3 gap-2 text-[12px]">
+          <QuotaCell label="ဆီဖြည့်" value={`${usedFills} / ${allowance.fills} ကြိမ်`} />
+          <QuotaCell label="ဖြည့်ပြီး" value={`${usedLiters} L`} />
+          <QuotaCell label="ကျန်ရှိ" value={`${remainingLiters} L`} />
+        </dl>
       </section>
 
       {/* ---------- Calculator ---------- */}
@@ -202,9 +223,9 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
           <h3 className="text-sm font-bold text-foreground">ဆီဖြည့်မှတ်တမ်း</h3>
         </header>
         <ul className="space-y-2">
-          <HistoryItem date="14 July 2026" station="Mandalay Fuel Station" fuel="92" liters="10 L" cost="31,500 MMK" />
-          <HistoryItem date="07 July 2026" station="Chan Mya Fuel" fuel="92" liters="10 L" cost="31,500 MMK" />
-          <HistoryItem date="30 June 2026" station="Aung Pyi Fuel Depot" fuel="Diesel" liters="20 L" cost="65,000 MMK" />
+          <HistoryItem date="14 July 2026" station="Mandalay Fuel Station" fuel={profile.fuelType} liters="10 L" cost="31,500 MMK" />
+          <HistoryItem date="07 July 2026" station="Chan Mya Fuel" fuel={profile.fuelType} liters="10 L" cost="31,500 MMK" />
+          <HistoryItem date="30 June 2026" station="Aung Pyi Fuel Depot" fuel={profile.fuelType} liters="20 L" cost="65,000 MMK" />
         </ul>
       </section>
 
@@ -227,19 +248,6 @@ function QuotaCell({ label, value }: { label: string; value: string }) {
       <dt className="text-[10px] text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 text-sm font-bold text-foreground">{value}</dd>
     </div>
-  );
-}
-
-function QuotaRow({ left, right, highlight = false }: { left: string; right: string; highlight?: boolean }) {
-  return (
-    <li
-      className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 ${
-        highlight ? "bg-primary/10" : "bg-card"
-      }`}
-    >
-      <span className="text-foreground">{left}</span>
-      <span className="font-semibold text-foreground">{right}</span>
-    </li>
   );
 }
 
@@ -314,6 +322,8 @@ function QrPreviewModal({
             <PreviewRow label="ယာဉ်နံပါတ်" value={profile.plate} />
             <PreviewRow label="အမျိုးအစား" value={profile.vehicle} />
             <PreviewRow label="ပိုင်ရှင်အမည်" value={profile.name} />
+            <PreviewRow label="ဆီအမျိုးအစား" value={profile.fuelType} />
+            <PreviewRow label="Engine" value={`${profile.engineCc} CC`} />
             {uploadedAt && <PreviewRow label="တင်သည့်ရက်" value={uploadedAt} />}
             <PreviewRow
               label="QR Status"

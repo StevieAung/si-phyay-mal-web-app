@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, ShieldCheck, LogOut, Pencil, Car, Bike } from "lucide-react";
 import { ProfileDashboard } from "./ProfileDashboard";
-import { useSession, type VehicleType } from "@/lib/fuel/session";
+import { useSession, type VehicleType, type FuelPref } from "@/lib/fuel/session";
 import { maskPhone, normalizeMyanmarPhone } from "@/lib/fuel/phone";
 import { PARITY_POLICY_NOTE, parsePlate, type PlateParity } from "@/lib/fuel/plate";
+
 
 export function AccountSheet() {
   const {
@@ -166,29 +167,44 @@ function ProfileStep({
   onSubmit,
 }: {
   phoneE164: string;
-  initial: { name: string; vehicle: VehicleType; plate: string; parity: PlateParity } | null;
+  initial: {
+    name: string;
+    vehicle: VehicleType;
+    plate: string;
+    parity: PlateParity;
+    fuelType: FuelPref;
+    engineCc: number;
+  } | null;
   onSubmit: (p: {
     name: string;
     vehicle: VehicleType;
     plate: string;
     parity: PlateParity;
+    fuelType: FuelPref;
+    engineCc: number;
   }) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [vehicle, setVehicle] = useState<VehicleType>(initial?.vehicle ?? "ကား");
   const [plate, setPlate] = useState(initial?.plate ?? "");
+  const [fuelType, setFuelType] = useState<FuelPref>(initial?.fuelType ?? "92");
+  const [engineCc, setEngineCc] = useState<string>(
+    initial?.engineCc ? String(initial.engineCc) : "",
+  );
   const [privateOk, setPrivateOk] = useState(false);
   const [consentOk, setConsentOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const plateInfo = useMemo(() => parsePlate(plate), [plate]);
+  const ccNum = Number(engineCc);
+  const ccValid = engineCc.trim() !== "" && Number.isFinite(ccNum) && ccNum > 0;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return setError("နာမည်ဖြည့်ပါ · Please enter your name.");
     if (!plateInfo.ok) return setError(plateInfo.error);
-    if (!privateOk)
-      return setError("Private vehicle checkbox is required.");
+    if (!ccValid) return setError("Engine CC ကို မှန်ကန်စွာ ထည့်ပါ");
+    if (!privateOk) return setError("Private vehicle checkbox is required.");
     if (!consentOk) return setError("သဘောတူညီချက်လိုအပ်သည် · Consent required.");
     setError(null);
     onSubmit({
@@ -196,8 +212,12 @@ function ProfileStep({
       vehicle,
       plate: plateInfo.normalized,
       parity: plateInfo.parity,
+      fuelType,
+      engineCc: ccNum,
     });
   }
+
+  const fuelOptions: FuelPref[] = ["92", "95", "Diesel"];
 
   return (
     <form onSubmit={submit} className="space-y-3">
@@ -268,6 +288,50 @@ function ProfileStep({
         <p className="mt-1.5 text-[11px] text-muted-foreground">{PARITY_POLICY_NOTE}</p>
       </label>
 
+      <div>
+        <span className="mb-1.5 block text-sm font-medium text-foreground">
+          ဆီအမျိုးအစား · Fuel type
+        </span>
+        <div role="radiogroup" className="grid grid-cols-3 gap-2">
+          {fuelOptions.map((f) => (
+            <button
+              type="button"
+              key={f}
+              role="radio"
+              aria-checked={fuelType === f}
+              onClick={() => setFuelType(f)}
+              className={`inline-flex h-11 items-center justify-center rounded-xl border text-sm font-medium ${
+                fuelType === f
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-foreground"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-medium text-foreground">
+          Engine CC
+        </span>
+        <div className="flex items-center gap-2">
+          <input
+            inputMode="numeric"
+            value={engineCc}
+            onChange={(e) => setEngineCc(e.target.value.replace(/[^\d]/g, ""))}
+            placeholder="ဥပမာ - 1500"
+            className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+            aria-invalid={engineCc.length > 0 && !ccValid}
+          />
+          <span className="text-sm font-semibold text-muted-foreground">CC</span>
+        </div>
+        {engineCc.length > 0 && !ccValid && (
+          <p className="mt-1.5 text-[12px] text-soldout">Engine CC ကို မှန်ကန်စွာ ထည့်ပါ</p>
+        )}
+      </label>
+
       <label className="flex items-start gap-2 text-[12px] text-foreground">
         <input
           type="checkbox"
@@ -307,6 +371,7 @@ function ProfileStep({
     </form>
   );
 }
+
 
 function VehicleChoice({
   active,
