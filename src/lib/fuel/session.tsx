@@ -55,7 +55,9 @@ interface SessionCtx {
   setPhone: (e164: string) => Promise<void>;
   completeProfile: (p: Omit<Profile, "phoneE164" | "id" | "qrCodePath">) => Promise<{ ok: boolean; error?: string }>;
   updateProfile: (p: Omit<Profile, "phoneE164" | "id" | "qrCodePath">) => Promise<{ ok: boolean; error?: string }>;
-  setQrCodePath: (path: string) => Promise<{ ok: boolean; error?: string }>;
+  uploadQrCode: (file: File) => Promise<{ ok: boolean; error?: string }>;
+  getQrSignedUrl: () => Promise<string | null>;
+
   signOut: () => void;
   requireCompleteProfile: (intent: PendingIntent) => boolean;
 }
