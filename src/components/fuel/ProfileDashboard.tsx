@@ -3,7 +3,7 @@ import { X, Upload, Eye, RefreshCw, QrCode, Fuel, Calculator, History, Bike, Car
 import type { Profile } from "@/lib/fuel/session";
 import { computeAllowance } from "@/lib/fuel/allowance";
 
-type FuelPermission = "allowed" | "blocked";
+
 
 export function ProfileDashboard({ profile }: { profile: Profile }) {
   // ---------- QR upload ----------
