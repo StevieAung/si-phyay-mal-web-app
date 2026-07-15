@@ -372,9 +372,14 @@ function ProfileStep({
 
       <button
         type="submit"
-        className="h-12 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+        disabled={submitting}
+        className="h-12 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-60"
       >
-        {initial ? "သိမ်းရန် · Save" : "အတည်ပြု · Complete profile"}
+        {submitting
+          ? "သိမ်းနေသည် · Saving…"
+          : initial
+            ? "သိမ်းရန် · Save"
+            : "အတည်ပြု · Complete profile"}
       </button>
     </form>
   );
