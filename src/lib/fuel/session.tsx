@@ -388,7 +388,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setPhone,
       completeProfile,
       updateProfile,
-      setQrCodePath,
+      uploadQrCode,
+      getQrSignedUrl,
+
       signOut,
       requireCompleteProfile,
     ],
