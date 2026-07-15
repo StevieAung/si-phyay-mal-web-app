@@ -22,6 +22,7 @@ export function LogFillModal({
   const [fuelType, setFuelType] = useState<FuelType>(defaultFuel);
   const [liters, setLiters] = useState<string>("10");
   const [pricePerL, setPricePerL] = useState<string>(String(defaultPrice ?? 3150));
+  const geo = useGeolocation();
 
   const station = useMemo(
     () => stations.find((s) => s.id === stationId) ?? null,
