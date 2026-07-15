@@ -15,7 +15,19 @@ import {
   PlusCircle,
   ThumbsUp,
 } from "lucide-react";
-import { toast } from "sonner";
+type ToastModule = typeof import("sonner");
+type ToastFn = ToastModule["toast"];
+const callToast = (method: "default" | "success", ...args: Parameters<ToastFn>) => {
+  if (typeof window === "undefined") return;
+  void import("sonner").then((m) => {
+    if (method === "success") m.toast.success(...args);
+    else m.toast(...args);
+  });
+};
+const toast = Object.assign(
+  (...args: Parameters<ToastFn>) => callToast("default", ...args),
+  { success: (...args: Parameters<ToastFn>) => callToast("success", ...args) },
+);
 import { AppShell } from "@/components/fuel/AppShell";
 import { useFuelStore } from "@/lib/fuel/store";
 import { useSession } from "@/lib/fuel/session";
