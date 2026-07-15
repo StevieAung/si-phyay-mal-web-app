@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { FuelProvider } from "../lib/fuel/store";
 import { SessionProvider } from "../lib/fuel/session";
 import { AccountSheet } from "../components/fuel/AccountSheet";
+import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
   return (
