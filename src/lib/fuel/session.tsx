@@ -95,6 +95,7 @@ function rowToProfile(row: {
   license_plate: string;
   fuel_type: string;
   engine_cc: number;
+  qr_code_path?: string | null;
 }): Profile {
   const parsed = parsePlate(row.license_plate);
   const parity: PlateParity = parsed.ok ? parsed.parity : "စုံ";
@@ -107,6 +108,7 @@ function rowToProfile(row: {
     parity,
     fuelType: (row.fuel_type as FuelPref) ?? "92",
     engineCc: row.engine_cc,
+    qrCodePath: row.qr_code_path ?? null,
   };
 }
 
