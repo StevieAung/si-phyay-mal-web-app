@@ -3,6 +3,7 @@ import { X, Upload, Eye, RefreshCw, QrCode, Fuel, Calculator, History, Bike, Car
 import type { Profile } from "@/lib/fuel/session";
 import { useSession } from "@/lib/fuel/session";
 import { computeAllowance } from "@/lib/fuel/allowance";
+import { useFillHistory } from "@/lib/fuel/fillHistory";
 
 export function ProfileDashboard({ profile }: { profile: Profile }) {
   const { uploadQrCode, getQrSignedUrl } = useSession();
