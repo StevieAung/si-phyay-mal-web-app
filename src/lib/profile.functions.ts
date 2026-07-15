@@ -9,6 +9,7 @@ const ProfileRow = z.object({
   license_plate: z.string(),
   fuel_type: z.string(),
   engine_cc: z.number(),
+  qr_code_path: z.string().nullable().optional(),
 });
 export type ProfileRow = z.infer<typeof ProfileRow>;
 
@@ -22,6 +23,11 @@ const UpdateInput = z.object({
   license_plate: z.string().min(1),
   fuel_type: z.string().min(1),
   engine_cc: z.number().int().positive(),
+});
+const QrInput = z.object({
+  id: z.string().uuid(),
+  phone: z.string().min(6),
+  qr_path: z.string().min(1),
 });
 
 async function admin() {
@@ -59,6 +65,19 @@ export const updateProfileByPhoneFn = createServerFn({ method: "POST" })
       _license_plate: data.license_plate,
       _fuel_type: data.fuel_type,
       _engine_cc: data.engine_cc,
+    });
+    if (error) throw new Error(error.message);
+    return rows && rows.length > 0 ? (rows[0] as ProfileRow) : null;
+  });
+
+export const setProfileQrFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => QrInput.parse(d))
+  .handler(async ({ data }): Promise<ProfileRow | null> => {
+    const sb = await admin();
+    const { data: rows, error } = await sb.rpc("set_profile_qr", {
+      _id: data.id,
+      _phone: data.phone,
+      _qr_path: data.qr_path,
     });
     if (error) throw new Error(error.message);
     return rows && rows.length > 0 ? (rows[0] as ProfileRow) : null;

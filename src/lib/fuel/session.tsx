@@ -12,6 +12,7 @@ import {
   getProfileByIdFn,
   getProfileByPhoneFn,
   updateProfileByPhoneFn,
+  setProfileQrFn,
 } from "@/lib/profile.functions";
 import type { PlateParity } from "./plate";
 import { parsePlate } from "./plate";
@@ -29,6 +30,7 @@ export interface Profile {
   parity: PlateParity;
   fuelType: FuelPref;
   engineCc: number;
+  qrCodePath: string | null;
 }
 
 export type PendingIntentKind = "directions" | "report" | "confirm";
@@ -49,8 +51,9 @@ interface SessionCtx {
   openSheet: (step?: SheetStep) => void;
   closeSheet: () => void;
   setPhone: (e164: string) => Promise<void>;
-  completeProfile: (p: Omit<Profile, "phoneE164" | "id">) => Promise<{ ok: boolean; error?: string }>;
-  updateProfile: (p: Omit<Profile, "phoneE164" | "id">) => Promise<{ ok: boolean; error?: string }>;
+  completeProfile: (p: Omit<Profile, "phoneE164" | "id" | "qrCodePath">) => Promise<{ ok: boolean; error?: string }>;
+  updateProfile: (p: Omit<Profile, "phoneE164" | "id" | "qrCodePath">) => Promise<{ ok: boolean; error?: string }>;
+  setQrCodePath: (path: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => void;
   requireCompleteProfile: (intent: PendingIntent) => boolean;
 }
@@ -92,6 +95,7 @@ function rowToProfile(row: {
   license_plate: string;
   fuel_type: string;
   engine_cc: number;
+  qr_code_path?: string | null;
 }): Profile {
   const parsed = parsePlate(row.license_plate);
   const parity: PlateParity = parsed.ok ? parsed.parity : "စုံ";
@@ -104,6 +108,7 @@ function rowToProfile(row: {
     parity,
     fuelType: (row.fuel_type as FuelPref) ?? "92",
     engineCc: row.engine_cc,
+    qrCodePath: row.qr_code_path ?? null,
   };
 }
 
@@ -269,6 +274,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [phoneE164, profile],
   );
 
+  const setQrCodePath = useCallback<SessionCtx["setQrCodePath"]>(
+    async (path) => {
+      if (!phoneE164 || !profile) return { ok: false, error: "Not signed in." };
+      try {
+        const updated = await setProfileQrFn({
+          data: { id: profile.id, phone: phoneE164, qr_path: path },
+        });
+        if (!updated) return { ok: false, error: "Could not save QR." };
+        setProfile(rowToProfile(updated));
+        return { ok: true };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : "Could not save QR.",
+        };
+      }
+    },
+    [phoneE164, profile],
+  );
+
+
 
 
   const signOut = useCallback(() => {
@@ -306,6 +332,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setPhone,
       completeProfile,
       updateProfile,
+      setQrCodePath,
       signOut,
       requireCompleteProfile,
     }),
@@ -320,6 +347,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setPhone,
       completeProfile,
       updateProfile,
+      setQrCodePath,
       signOut,
       requireCompleteProfile,
     ],

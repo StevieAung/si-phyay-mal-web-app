@@ -1,28 +1,89 @@
-import { useMemo, useRef, useState } from "react";
-import { X, Upload, Eye, RefreshCw, QrCode, Fuel, Calculator, History, Bike, Car } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { X, Upload, Eye, RefreshCw, QrCode, Fuel, Calculator, History, Bike, Car, Loader2 } from "lucide-react";
 import type { Profile } from "@/lib/fuel/session";
+import { useSession } from "@/lib/fuel/session";
 import { computeAllowance } from "@/lib/fuel/allowance";
+import { supabase } from "@/integrations/supabase/client";
 
+const QR_BUCKET = "vehicle-qr";
 
+async function pathToBlobUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(QR_BUCKET).download(path);
+  if (error || !data) return null;
+  return URL.createObjectURL(data);
+}
 
 export function ProfileDashboard({ profile }: { profile: Profile }) {
+  const { setQrCodePath } = useSession();
+
   // ---------- QR upload ----------
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrUploadedAt, setQrUploadedAt] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!/image\/(jpeg|jpg|png|webp)/i.test(file.type)) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setQrDataUrl(String(reader.result));
-      setQrUploadedAt(new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }));
+  // Load existing QR from storage whenever the stored path changes.
+  useEffect(() => {
+    let revoked: string | null = null;
+    let cancelled = false;
+    if (!profile.qrCodePath) {
+      setQrDataUrl(null);
+      return;
+    }
+    void pathToBlobUrl(profile.qrCodePath).then((url) => {
+      if (cancelled) {
+        if (url) URL.revokeObjectURL(url);
+        return;
+      }
+      if (url) {
+        setQrDataUrl(url);
+        revoked = url;
+      }
+    });
+    return () => {
+      cancelled = true;
+      if (revoked) URL.revokeObjectURL(revoked);
     };
-    reader.readAsDataURL(file);
+  }, [profile.qrCodePath]);
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
     e.target.value = "";
+    if (!file) return;
+    if (!/image\/(jpeg|jpg|png|webp)/i.test(file.type)) {
+      setUploadError("JPG, PNG သို့ WEBP ဖိုင်သာ လက်ခံပါသည်");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("ဖိုင် အရွယ်အစား 5MB ထက်မကျော်ရပါ");
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${profile.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(QR_BUCKET)
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (upErr) throw upErr;
+      const res = await setQrCodePath(path);
+      if (!res.ok) throw new Error(res.error ?? "Save failed");
+      setQrUploadedAt(
+        new Date().toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        }),
+      );
+    } catch (err) {
+      console.error("[qr] upload failed", err);
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   }
 
   // ---------- Allowance from Engine CC ----------
@@ -74,11 +135,19 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground"
+              disabled={uploading}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground disabled:opacity-60"
             >
-              <Upload className="h-3.5 w-3.5" aria-hidden />
-              ဓာတ်ပုံတင်ရန်
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : (
+                <Upload className="h-3.5 w-3.5" aria-hidden />
+              )}
+              {uploading ? "တင်နေသည်..." : "ဓာတ်ပုံတင်ရန်"}
             </button>
+            {uploadError && (
+              <p className="text-[11px] text-destructive">{uploadError}</p>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-3">
@@ -100,12 +169,20 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-primary text-xs font-semibold text-primary-foreground"
+                disabled={uploading}
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-primary text-xs font-semibold text-primary-foreground disabled:opacity-60"
               >
-                <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-                ပြန်တင်ရန်
+                {uploading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                )}
+                {uploading ? "တင်နေသည်..." : "ပြန်တင်ရန်"}
               </button>
             </div>
+            {uploadError && (
+              <p className="text-[11px] text-destructive">{uploadError}</p>
+            )}
           </div>
         )}
       </section>

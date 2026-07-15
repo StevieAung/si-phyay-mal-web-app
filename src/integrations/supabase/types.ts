@@ -23,6 +23,7 @@ export type Database = {
           license_plate: string
           name: string
           phone: string
+          qr_code_path: string | null
           updated_at: string
           vehicle_type: string
         }
@@ -34,6 +35,7 @@ export type Database = {
           license_plate: string
           name: string
           phone: string
+          qr_code_path?: string | null
           updated_at?: string
           vehicle_type: string
         }
@@ -45,6 +47,7 @@ export type Database = {
           license_plate?: string
           name?: string
           phone?: string
+          qr_code_path?: string | null
           updated_at?: string
           vehicle_type?: string
         }
@@ -276,6 +279,7 @@ export type Database = {
           license_plate: string
           name: string
           phone: string
+          qr_code_path: string
           vehicle_type: string
         }[]
       }
@@ -288,6 +292,20 @@ export type Database = {
           license_plate: string
           name: string
           phone: string
+          qr_code_path: string
+          vehicle_type: string
+        }[]
+      }
+      set_profile_qr: {
+        Args: { _id: string; _phone: string; _qr_path: string }
+        Returns: {
+          engine_cc: number
+          fuel_type: string
+          id: string
+          license_plate: string
+          name: string
+          phone: string
+          qr_code_path: string
           vehicle_type: string
         }[]
       }
@@ -308,6 +326,7 @@ export type Database = {
           license_plate: string
           name: string
           phone: string
+          qr_code_path: string
           vehicle_type: string
         }[]
       }
