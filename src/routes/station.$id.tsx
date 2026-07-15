@@ -15,7 +15,10 @@ import {
   PlusCircle,
   ThumbsUp,
 } from "lucide-react";
-import { toast } from "sonner";
+const toast = (...args: Parameters<typeof import("sonner").toast>) => {
+  if (typeof window === "undefined") return;
+  void import("sonner").then((m) => m.toast(...args));
+};
 import { AppShell } from "@/components/fuel/AppShell";
 import { useFuelStore } from "@/lib/fuel/store";
 import { useSession } from "@/lib/fuel/session";
