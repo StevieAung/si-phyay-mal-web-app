@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { CheckCircle2 } from "lucide-react";
 import { AppShell, BrandHeader } from "@/components/fuel/AppShell";
+import { StationPicker } from "@/components/fuel/StationPicker";
 import { useFuelStore } from "@/lib/fuel/store";
 import { useSession } from "@/lib/fuel/session";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import {
   FUEL_STATUSES,
   FUEL_TYPES,
