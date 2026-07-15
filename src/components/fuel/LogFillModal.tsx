@@ -73,22 +73,18 @@ export function LogFillModal({
         </div>
 
         <div className="space-y-3 p-4">
-          <label className="block">
+          <div>
             <span className="mb-1 block text-[12px] text-muted-foreground">
               ဘယ်ဆီဆိုင်မှာ ဖြည့်ခဲ့လဲ
             </span>
-            <select
+            <StationPicker
+              stations={stations}
               value={stationId}
-              onChange={(e) => setStationId(e.target.value)}
-              className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:border-primary focus:outline-none"
-            >
-              {stations.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} · {s.township}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={setStationId}
+              origin={geo.coords}
+            />
+          </div>
+
 
           <div>
             <span className="mb-1 block text-[12px] text-muted-foreground">ဆီအမျိုးအစား</span>
