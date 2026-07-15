@@ -447,20 +447,6 @@ function ProfileView({
       <dl className="grid grid-cols-2 gap-2 text-[12px]">
         <Row label="ယာဉ်" value={profile.vehicle} />
         <Row label="ကားနံပါတ်" value={profile.plate} />
-        <Row
-          label="စုံ/မ"
-          value={
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                profile.parity === "စုံ"
-                  ? "bg-available/15 text-available"
-                  : "bg-primary/15 text-primary"
-              }`}
-            >
-              {profile.parity}
-            </span>
-          }
-        />
       </dl>
       <p className="text-[11px] text-muted-foreground">{PARITY_POLICY_NOTE}</p>
 
