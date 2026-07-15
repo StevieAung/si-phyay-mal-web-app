@@ -12,6 +12,7 @@ import {
   getProfileByIdFn,
   getProfileByPhoneFn,
   updateProfileByPhoneFn,
+  setProfileQrFn,
 } from "@/lib/profile.functions";
 import type { PlateParity } from "./plate";
 import { parsePlate } from "./plate";
