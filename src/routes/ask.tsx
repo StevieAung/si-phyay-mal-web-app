@@ -128,7 +128,7 @@ function AskPage() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="မေးမြန်းရန်... e.g. Nearest 95 station"
+          placeholder="မေးမြန်းရန်... ဥပမာ - အနီးဆုံး 95 ဆိုင်"
           className="h-10 flex-1 bg-transparent px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           style={{ fontSize: 16 }}
         />
