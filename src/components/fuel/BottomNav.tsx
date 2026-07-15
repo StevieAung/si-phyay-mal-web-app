@@ -43,13 +43,13 @@ export function BottomNav() {
           <button
             type="button"
             onClick={onReportClick}
-            aria-label="Report / အစီရင်ခံ"
+            aria-label="Report / ကူညီမယ်"
             className="group absolute left-1/2 -top-5 grid h-[60px] w-[60px] -translate-x-1/2 place-items-center rounded-full bg-[#DC2626] text-white shadow-lg shadow-[#DC2626]/40 outline-none ring-0 transition-transform duration-150 hover:scale-105 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2 focus-visible:ring-offset-card active:scale-[0.97]"
           >
             <Plus className="h-7 w-7" aria-hidden strokeWidth={2.5} />
           </button>
           <span className="text-[11px] font-semibold text-[#DC2626]">
-            အစီရင်ခံ
+            ကူညီမယ်
           </span>
         </li>
         <li>
