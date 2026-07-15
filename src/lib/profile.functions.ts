@@ -9,6 +9,7 @@ const ProfileRow = z.object({
   license_plate: z.string(),
   fuel_type: z.string(),
   engine_cc: z.number(),
+  qr_code_path: z.string().nullable().optional(),
 });
 export type ProfileRow = z.infer<typeof ProfileRow>;
 
@@ -22,6 +23,11 @@ const UpdateInput = z.object({
   license_plate: z.string().min(1),
   fuel_type: z.string().min(1),
   engine_cc: z.number().int().positive(),
+});
+const QrInput = z.object({
+  id: z.string().uuid(),
+  phone: z.string().min(6),
+  qr_path: z.string().min(1),
 });
 
 async function admin() {
