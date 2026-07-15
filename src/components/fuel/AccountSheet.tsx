@@ -451,7 +451,12 @@ function ProfileView({
         <Row label="ယာဉ်" value={profile.vehicle} />
         <Row label="ကားနံပါတ်" value={profile.plate} />
       </dl>
+
+      {/* ---------- Parity + Fuel Permission ---------- */}
+      <ParityPermissionCard profile={profile} />
+
       <p className="text-[11px] text-muted-foreground">{PARITY_POLICY_NOTE}</p>
+
 
       <div className="grid grid-cols-2 gap-2 pt-1">
         <button
