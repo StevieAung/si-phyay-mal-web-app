@@ -69,3 +69,16 @@ export const updateProfileByPhoneFn = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows && rows.length > 0 ? (rows[0] as ProfileRow) : null;
   });
+
+export const setProfileQrFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => QrInput.parse(d))
+  .handler(async ({ data }): Promise<ProfileRow | null> => {
+    const sb = await admin();
+    const { data: rows, error } = await sb.rpc("set_profile_qr", {
+      _id: data.id,
+      _phone: data.phone,
+      _qr_path: data.qr_path,
+    });
+    if (error) throw new Error(error.message);
+    return rows && rows.length > 0 ? (rows[0] as ProfileRow) : null;
+  });
