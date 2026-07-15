@@ -168,61 +168,73 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const completeProfile = useCallback<SessionCtx["completeProfile"]>(
     async (p) => {
-      if (!phoneE164) return;
+      if (!phoneE164) return { ok: false, error: "Phone missing." };
 
-      // Try direct insert first. If the phone already exists, fall back to
-      // the server-side ownership-gated lookup + update.
-      const { data: inserted, error: insertErr } = await supabase
-        .from("profiles")
-        .insert({
-          phone: phoneE164,
-          name: p.name,
-          vehicle_type: p.vehicle,
-          license_plate: p.plate,
-          fuel_type: p.fuelType,
-          engine_cc: p.engineCc,
-        })
-        .select("id, phone, name, vehicle_type, license_plate, fuel_type, engine_cc")
-        .single();
+      // Anon INSERT is allowed by RLS but SELECT is denied, so we cannot
+      // read the row back via .select() — do a bare insert, then read via
+      // the server-side admin RPC.
+      const { error: insertErr } = await supabase.from("profiles").insert({
+        phone: phoneE164,
+        name: p.name,
+        vehicle_type: p.vehicle,
+        license_plate: p.plate,
+        fuel_type: p.fuelType,
+        engine_cc: p.engineCc,
+      });
+
+      // Duplicate phone (23505) or any other insert failure: treat as an
+      // update against the existing row. Any other insert error is fatal.
+      const isDuplicate =
+        !!insertErr && (insertErr.code === "23505" || /duplicate/i.test(insertErr.message));
+      if (insertErr && !isDuplicate) {
+        console.error("[profiles] insert failed", insertErr);
+        return { ok: false, error: insertErr.message || "Could not save profile." };
+      }
 
       let full: Profile | null = null;
-      if (!insertErr && inserted) {
-        full = rowToProfile(inserted);
-      } else {
-        try {
-          const existing = await getProfileByPhoneFn({ data: { phone: phoneE164 } });
-          if (existing) {
-            const updated = await updateProfileByPhoneFn({
-              data: {
-                id: existing.id,
-                phone: phoneE164,
-                name: p.name,
-                vehicle_type: p.vehicle,
-                license_plate: p.plate,
-                fuel_type: p.fuelType,
-                engine_cc: p.engineCc,
-              },
-            });
-            if (updated) full = rowToProfile(updated);
-          }
-        } catch (err) {
-          console.error("[profiles] upsert fallback failed", err);
+      try {
+        const existing = await getProfileByPhoneFn({ data: { phone: phoneE164 } });
+        if (!existing) {
+          return { ok: false, error: "Profile saved but could not be loaded." };
         }
+        if (isDuplicate) {
+          const updated = await updateProfileByPhoneFn({
+            data: {
+              id: existing.id,
+              phone: phoneE164,
+              name: p.name,
+              vehicle_type: p.vehicle,
+              license_plate: p.plate,
+              fuel_type: p.fuelType,
+              engine_cc: p.engineCc,
+            },
+          });
+          if (updated) full = rowToProfile(updated);
+        } else {
+          full = rowToProfile(existing);
+        }
+      } catch (err) {
+        console.error("[profiles] read-back failed", err);
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : "Could not load saved profile.",
+        };
       }
 
-      if (!full) {
-        console.error("[profiles] upsert failed", insertErr);
-        return;
-      }
+      if (!full) return { ok: false, error: "Could not save profile." };
+
       setProfile(full);
       safeSet(PROFILE_ID_KEY, full.id);
       setOpen(false);
       const intent = pending;
       setPending(null);
       if (intent) intent.onResume();
+      return { ok: true };
     },
     [phoneE164, pending],
   );
+
+
 
   const updateProfile = useCallback<SessionCtx["updateProfile"]>(
     async (p) => {
