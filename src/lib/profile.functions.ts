@@ -94,3 +94,56 @@ export const setProfileQrFn = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows && rows.length > 0 ? (rows[0] as ProfileRow) : null;
   });
+
+// Verifies (id, phone) matches an existing profile, then uploads QR bytes
+// to the private bucket and stores the path on the profile.
+export const uploadQrCodeFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => QrUploadInput.parse(d))
+  .handler(async ({ data }): Promise<ProfileRow | null> => {
+    const sb = await admin();
+    // Ownership check: profile id must match provided phone.
+    const { data: rows, error: pErr } = await sb.rpc("get_profile_by_id", { _id: data.id });
+    if (pErr) throw new Error(pErr.message);
+    const owner = rows && rows.length > 0 ? rows[0] : null;
+    if (!owner || owner.phone !== data.phone) throw new Error("Not authorized");
+
+    const allowed = /^(jpe?g|png|webp)$/i.test(data.ext);
+    if (!allowed) throw new Error("Unsupported file type");
+    if (!/^image\/(jpeg|jpg|png|webp)$/i.test(data.content_type)) {
+      throw new Error("Unsupported content type");
+    }
+    const bytes = Buffer.from(data.data_base64, "base64");
+    if (bytes.byteLength > 5 * 1024 * 1024) throw new Error("File too large");
+
+    const path = `${data.id}/${Date.now()}.${data.ext.toLowerCase()}`;
+    const { error: upErr } = await sb.storage
+      .from("vehicle-qr")
+      .upload(path, bytes, { contentType: data.content_type, upsert: false });
+    if (upErr) throw new Error(upErr.message);
+
+    const { data: updated, error: sErr } = await sb.rpc("set_profile_qr", {
+      _id: data.id,
+      _phone: data.phone,
+      _qr_path: path,
+    });
+    if (sErr) throw new Error(sErr.message);
+    return updated && updated.length > 0 ? (updated[0] as ProfileRow) : null;
+  });
+
+export const getQrSignedUrlFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => QrSignedUrlInput.parse(d))
+  .handler(async ({ data }): Promise<{ url: string } | null> => {
+    const sb = await admin();
+    const { data: rows, error: pErr } = await sb.rpc("get_profile_by_id", { _id: data.id });
+    if (pErr) throw new Error(pErr.message);
+    const owner = rows && rows.length > 0 ? rows[0] : null;
+    if (!owner || owner.phone !== data.phone) throw new Error("Not authorized");
+    if (!owner.qr_code_path) return null;
+
+    const { data: signed, error: sErr } = await sb.storage
+      .from("vehicle-qr")
+      .createSignedUrl(owner.qr_code_path, 60 * 10);
+    if (sErr || !signed) throw new Error(sErr?.message ?? "Signing failed");
+    return { url: signed.signedUrl };
+  });
+
