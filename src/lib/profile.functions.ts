@@ -29,6 +29,18 @@ const QrInput = z.object({
   phone: z.string().min(6),
   qr_path: z.string().min(1),
 });
+const QrUploadInput = z.object({
+  id: z.string().uuid(),
+  phone: z.string().min(6),
+  content_type: z.string().min(1),
+  data_base64: z.string().min(1),
+  ext: z.string().min(1).max(5),
+});
+const QrSignedUrlInput = z.object({
+  id: z.string().uuid(),
+  phone: z.string().min(6),
+});
+
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
