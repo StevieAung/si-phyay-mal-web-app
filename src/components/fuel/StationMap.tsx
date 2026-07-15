@@ -22,6 +22,7 @@ export function StationMap({
   userLocation,
   radiusKm,
   heightClass = "h-full",
+  recenterNonce = 0,
 }: {
   pins: Pin[];
   center: { lat: number; lng: number };
@@ -29,6 +30,7 @@ export function StationMap({
   userLocation?: { lat: number; lng: number } | null;
   radiusKm?: number | null;
   heightClass?: string;
+  recenterNonce?: number;
 }) {
   const [mounted, setMounted] = useState(false);
   const [failed, setFailed] = useState(false);
