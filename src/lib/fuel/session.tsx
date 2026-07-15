@@ -278,12 +278,34 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [phoneE164, profile],
   );
 
-  const setQrCodePath = useCallback<SessionCtx["setQrCodePath"]>(
-    async (path) => {
+  const uploadQrCode = useCallback<SessionCtx["uploadQrCode"]>(
+    async (file) => {
       if (!phoneE164 || !profile) return { ok: false, error: "Not signed in." };
       try {
-        const updated = await setProfileQrFn({
-          data: { id: profile.id, phone: phoneE164, qr_path: path },
+        if (!/image\/(jpeg|jpg|png|webp)/i.test(file.type)) {
+          return { ok: false, error: "Unsupported file type" };
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          return { ok: false, error: "File too large" };
+        }
+        const buf = await file.arrayBuffer();
+        // Convert to base64 without blowing the call stack.
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        const CHUNK = 0x8000;
+        for (let i = 0; i < bytes.length; i += CHUNK) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+        }
+        const data_base64 = btoa(binary);
+        const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+        const updated = await uploadQrCodeFn({
+          data: {
+            id: profile.id,
+            phone: phoneE164,
+            content_type: file.type,
+            data_base64,
+            ext,
+          },
         });
         if (!updated) return { ok: false, error: "Could not save QR." };
         setProfile(rowToProfile(updated));
@@ -297,6 +319,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     [phoneE164, profile],
   );
+
+  const getQrSignedUrl = useCallback<SessionCtx["getQrSignedUrl"]>(async () => {
+    if (!phoneE164 || !profile) return null;
+    try {
+      const res = await getQrSignedUrlFn({
+        data: { id: profile.id, phone: phoneE164 },
+      });
+      return res?.url ?? null;
+    } catch {
+      return null;
+    }
+  }, [phoneE164, profile]);
+
 
 
 
