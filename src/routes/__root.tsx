@@ -131,6 +131,7 @@ function RootComponent() {
         <SessionProvider>
           <Outlet />
           <AccountSheet />
+          <Toaster />
         </SessionProvider>
       </FuelProvider>
     </QueryClientProvider>
