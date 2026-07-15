@@ -79,7 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "viewport", content: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" },
       { title: "ဆီဖြည့်မယ် — Community fuel updates for Mandalay" },
       { name: "description", content: "ဆီရှိတဲ့နေရာ သိပြီး၊ ဆီဖြည့်မယ်။ Community reports on fuel availability, queues, and station status across Mandalay." },
       { property: "og:title", content: "ဆီဖြည့်မယ် — Community fuel updates for Mandalay" },

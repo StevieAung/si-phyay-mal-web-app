@@ -126,8 +126,9 @@ function DiscoverPage() {
   }));
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col">
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col overflow-y-auto overscroll-contain">
+
         {/* Header */}
         <header className="px-4 pt-4 pb-3">
           <div className="flex items-start gap-3">
