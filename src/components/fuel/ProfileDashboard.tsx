@@ -3,7 +3,7 @@ import { X, Upload, Eye, RefreshCw, QrCode, Fuel, Calculator, History, Bike, Car
 import type { Profile } from "@/lib/fuel/session";
 import { computeAllowance } from "@/lib/fuel/allowance";
 
-type FuelPermission = "allowed" | "blocked";
+
 
 export function ProfileDashboard({ profile }: { profile: Profile }) {
   // ---------- QR upload ----------
@@ -24,13 +24,6 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
     reader.readAsDataURL(file);
     e.target.value = "";
   }
-
-  // ---------- Permission (derived from plate parity vs today's date) ----------
-  // Even date → စုံ plates allowed; Odd date → မ plates allowed. Informational only.
-  const today = new Date();
-  const todayParity: "စုံ" | "မ" = today.getDate() % 2 === 0 ? "စုံ" : "မ";
-  const permission: FuelPermission = profile.parity === todayParity ? "allowed" : "blocked";
-  const todayLabel = today.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 
   // ---------- Allowance from Engine CC ----------
   const isMoto = profile.vehicle === "မော်တော်ဆိုင်ကယ်";
@@ -115,36 +108,6 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
             </div>
           </div>
         )}
-      </section>
-
-      {/* ---------- Parity + Fuel Permission (unified) ---------- */}
-      <section className="rounded-2xl border border-border bg-background/60 p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] text-muted-foreground">စုံ / မ · ဆီဖြည့်ခွင့်</p>
-          <span className="rounded-full border border-border bg-background px-1.5 py-0.5 text-[9px] text-muted-foreground">
-            {todayLabel}
-          </span>
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          <span
-            className={`inline-block rounded-full px-2.5 py-0.5 text-sm font-bold ${
-              profile.parity === "စုံ"
-                ? "bg-available/15 text-available"
-                : "bg-primary/15 text-primary"
-            }`}
-          >
-            {profile.parity}
-          </span>
-          {permission === "allowed" ? (
-            <span className="text-[12px] font-semibold text-available">
-              🟢 ယနေ့ ဆီဖြည့်နိုင်ပါသည်
-            </span>
-          ) : (
-            <span className="text-[12px] font-semibold text-soldout">
-              🔴 ယနေ့ ဆီဖြည့်၍မရပါ
-            </span>
-          )}
-        </div>
       </section>
 
       {/* ---------- Allowance from Engine CC ---------- */}

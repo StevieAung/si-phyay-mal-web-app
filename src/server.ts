@@ -4,6 +4,9 @@
 // Inline here so Vite doesn't tree-shake a side-effect-only import.
 {
   const g = globalThis as unknown as Record<string, unknown>;
+  if (typeof g.self === "undefined") {
+    g.self = g;
+  }
   if (typeof g.window === "undefined") {
     const noop = () => {};
     const win: Record<string, unknown> = {
@@ -43,6 +46,7 @@
     (g.window as Record<string, unknown>).navigator = nav;
   }
 }
+
 
 import "./lib/error-capture";
 
