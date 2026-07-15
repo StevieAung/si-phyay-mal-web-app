@@ -20,12 +20,12 @@ interface ChatMessage {
 }
 
 const SUGGESTIONS: string[] = [
-  "Nearest Diesel station",
-  "Find 95 fuel",
-  "Shortest queue for 92",
-  "How reliable is this station?",
-  "Why did you recommend this?",
-  "Compare nearby Diesel stations",
+  "အနီးဆုံး ဒီဇယ်ဆိုင်ရှာပေးပါ",
+  "95 ဆီရတဲ့ဆိုင်ရှာပေးပါ",
+  "92 တန်းစီတိုတဲ့ဆိုင်",
+  "ဒီဆိုင်ကို ယုံလို့ရလား?",
+  "ဘာကြောင့် ဒီဆိုင်ကို အကြံပြုတာလဲ?",
+  "ဒီဇယ်ဆိုင် နှိုင်းယှဉ်ပေးပါ",
 ];
 
 const WELCOME: ChatMessage = {
