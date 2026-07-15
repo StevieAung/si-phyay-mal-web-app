@@ -159,7 +159,7 @@ function PhoneStep({ onSubmit }: { onSubmit: (e164: string) => void }) {
         type="submit"
         className="h-12 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
       >
-        Demo အဖြစ် ဆက်ရန်
+        ဖုန်းနံပါတ်ထည့်ရန်
       </button>
     </form>
   );
