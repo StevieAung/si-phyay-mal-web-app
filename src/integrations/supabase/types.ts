@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          disclaimer: string | null
+          id: string
+          profile_id: string
+          refs: Json | null
+          role: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          disclaimer?: string | null
+          id?: string
+          profile_id: string
+          refs?: Json | null
+          role: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          disclaimer?: string | null
+          id?: string
+          profile_id?: string
+          refs?: Json | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -270,6 +308,21 @@ export type Database = {
       }
     }
     Functions: {
+      clear_chat_messages: {
+        Args: { _id: string; _phone: string }
+        Returns: undefined
+      }
+      get_chat_messages: {
+        Args: { _id: string; _phone: string }
+        Returns: {
+          content: string
+          created_at: string
+          disclaimer: string
+          id: string
+          refs: Json
+          role: string
+        }[]
+      }
       get_profile_by_id: {
         Args: { _id: string }
         Returns: {
