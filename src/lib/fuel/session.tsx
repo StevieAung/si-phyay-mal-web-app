@@ -238,7 +238,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = useCallback<SessionCtx["updateProfile"]>(
     async (p) => {
-      if (!phoneE164 || !profile) return;
+      if (!phoneE164 || !profile) return { ok: false, error: "Not signed in." };
       try {
         const updated = await updateProfileByPhoneFn({
           data: {
@@ -253,16 +253,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         });
         if (!updated) {
           console.error("[profiles] update returned no row");
-          return;
+          return { ok: false, error: "Could not update profile." };
         }
         setProfile(rowToProfile(updated));
         setStep("view");
+        return { ok: true };
       } catch (err) {
         console.error("[profiles] update failed", err);
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : "Could not update profile.",
+        };
       }
     },
     [phoneE164, profile],
   );
+
 
 
   const signOut = useCallback(() => {
