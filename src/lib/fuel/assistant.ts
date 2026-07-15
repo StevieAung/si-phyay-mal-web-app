@@ -1,4 +1,4 @@
-import type { FuelType, Station, Report, FuelState, Confidence } from "./types";
+import type { FuelType, Station, Report, FuelState, Confidence, FuelStatus, QueueStatus } from "./types";
 import { FUEL_TYPES } from "./types";
 import {
   deriveFuelState,
@@ -9,7 +9,7 @@ import {
   type RankedStation,
 } from "./derive";
 
-// ---------- Intent detection ----------
+// ---------- Intent detection (Burmese + English) ----------
 
 export type Intent =
   | { kind: "find"; fuel: FuelType | null }
@@ -21,11 +21,10 @@ export type Intent =
 
 function detectFuel(text: string): FuelType | null {
   const t = text.toLowerCase();
-  if (/\bpremium\s*diesel\b|premium/.test(t)) return "Premium Diesel";
+  if (/premium\s*diesel|premium|ပရီမီယံ/.test(t)) return "Premium Diesel";
   if (/\bdiesel\b|ဒီဇယ်/.test(t)) return "Diesel";
-  if (/\b95\b/.test(t)) return "95";
-  if (/\b92\b/.test(t)) return "92";
-  // Match any known fuel exactly
+  if (/\b95\b|၉၅/.test(t)) return "95";
+  if (/\b92\b|၉၂/.test(t)) return "92";
   for (const f of FUEL_TYPES) if (t.includes(f.toLowerCase())) return f;
   return null;
 }
@@ -34,18 +33,17 @@ export function detectIntent(text: string): Intent {
   const t = text.toLowerCase().trim();
   const fuel = detectFuel(t);
 
-  if (/\b(compare|vs|versus|better|which one)\b|နှိုင်း/.test(t))
+  if (/\b(compare|vs|versus|better|which one)\b|နှိုင်း|ဘယ်ဆိုင်.*ကောင်း|ပိုကောင်း/.test(t))
     return { kind: "compare", fuel };
-  if (/\b(why|explain|recommend|choose|chose|reason)\b|ဘာကြောင့်/.test(t))
+  if (/\b(why|explain|recommend|choose|chose|reason)\b|ဘာကြောင့်|အကြောင်းရင်း|ဘာဖြစ်လို့/.test(t))
     return { kind: "explain", fuel };
-  if (/\b(confiden|trust|sure|reliab|accurate)\b|ယုံ|သေချာ/.test(t))
+  if (/\b(confiden|trust|sure|reliab|accurate)\b|ယုံ|သေချာ|မှန်/.test(t))
     return { kind: "confidence", fuel, stationHint: null };
-  if (/\b(shortest|short queue|less queue|no queue|fastest)\b|တန်းစီ.*တို|တိုတို/.test(t))
+  if (/\b(shortest|short queue|less queue|no queue|fastest)\b|တန်းစီ.*(တို|နည်း)|တိုတို/.test(t))
     return { kind: "shortest_queue", fuel };
-  if (/\b(nearest|closest|find|where|near me|nearby)\b|အနီး|ရှာ|ဘယ်မှာ/.test(t))
+  if (/\b(nearest|closest|find|where|near me|nearby)\b|အနီး|ရှာ|ဘယ်မှာ|ဒီနား/.test(t))
     return { kind: "find", fuel };
 
-  // If only a fuel name was given, treat as find
   if (fuel) return { kind: "find", fuel };
   return { kind: "unknown" };
 }
@@ -67,183 +65,178 @@ export interface StationRef {
 
 export interface AssistantReply {
   text: string;
-  refs: StationRef[]; // Actionable "View station" links
+  refs: StationRef[];
   disclaimer?: string;
 }
 
 const CONFIDENCE_MY: Record<Confidence, string> = {
-  High: "မြင့်မားသော",
+  High: "မြင့်",
   Medium: "အလယ်အလတ်",
-  Low: "နိမ့်သော",
-  Conflicting: "ကွဲလွဲနေသော",
+  Low: "နိမ့်",
+  Conflicting: "ကွဲလွဲနေ",
 };
 
+const STATUS_MY: Record<FuelStatus, string> = {
+  Available: "ရရှိနိုင်သည်",
+  Limited: "အကန့်အသတ်ရှိ",
+  "Sold Out": "ကုန်နေပြီ",
+  Closed: "ပိတ်ထားသည်",
+};
+
+const QUEUE_MY: Record<QueueStatus, string> = {
+  "No Queue": "တန်းစီမရှိ",
+  Short: "တိုတို",
+  Medium: "အလယ်အလတ်",
+  Long: "ရှည်",
+};
+
+const DISCLAIMER = "Community report များအပေါ် အခြေခံထားပါသည်။";
+
 function locationNote(ctx: AssistantContext): string {
-  return ctx.hasUserLocation
-    ? ""
-    : " (မန္တလေးမြို့လယ်မှ တွက်ချက်ထားပါသည်)";
+  return ctx.hasUserLocation ? "" : " (မန္တလေးမြို့လယ်မှ တွက်ချက်ထားပါသည်)";
 }
 
-function fmtStationLine(r: RankedStation): string {
+function stationBlock(r: RankedStation): string {
   const q = r.state.queue ?? "No Queue";
-  return `• ${r.station.name} — ${r.distanceKm.toFixed(1)} km, ${r.state.status}, ${q}, ${formatRelativeTime(r.state.updatedAt)}`;
+  return [
+    `📍 အကွာအဝေး — ${r.distanceKm.toFixed(1)} km`,
+    `⛽ ဆီအခြေအနေ — ${STATUS_MY[r.state.status]}`,
+    `🚗 တန်းစီ — ${QUEUE_MY[q]}`,
+    `🕒 နောက်ဆုံး update — ${formatRelativeTime(r.state.updatedAt)}`,
+    `✓ ယုံကြည်မှုအဆင့် — ${CONFIDENCE_MY[r.state.confidence]}`,
+  ].join("\n");
 }
 
 function replyFind(fuel: FuelType | null, ctx: AssistantContext): AssistantReply {
   if (!fuel) {
     return {
-      text: "ဘယ်ဆီအမျိုးအစား ရှာနေတာလဲ ခင်ဗျာ? 92, 95, Diesel, သို့မဟုတ် Premium Diesel ကို ရွေးပေးပါ။",
+      text: "ဘယ်ဆီအမျိုးအစား ရှာနေတာလဲ ခင်ဗျာ?\n92, 95, Diesel, သို့မဟုတ် Premium Diesel ကို ရွေးပေးပါ။",
       refs: [],
     };
   }
   const ranked = rankForFuel(fuel, ctx.stations, ctx.reports, ctx.origin).slice(0, 3);
   if (ranked.length === 0) {
     return {
-      text: `လက်ရှိတွင် ${fuel} ရရှိနိုင်သည့် ဆီဆိုင် (Community reports အရ) မတွေ့ရသေးပါ။ နောက်မှ ပြန်ကြည့်ပါ။`,
+      text: `လက်ရှိတွင် ${fuel} ရရှိနိုင်သည့် ဆီဆိုင် မတွေ့ရသေးပါ။ နောက်မှ ပြန်ကြည့်ပါ။`,
       refs: [],
+      disclaimer: DISCLAIMER,
     };
   }
   const top = ranked[0];
   const lines = [
-    `${fuel} ရရှိနိုင်သည့် ${ranked.length} ဆိုင် တွေ့ရှိပါသည်${locationNote(ctx)}။`,
+    `အနီးဆုံး ${fuel} ဆီရနိုင်တဲ့ဆိုင် ${ranked.length} ဆိုင် တွေ့ရှိပါတယ်${locationNote(ctx)}။`,
     "",
-    `အနီးဆုံးက **${top.station.name}** — ${top.distanceKm.toFixed(1)} km အကွာ။`,
-    `နောက်ဆုံး community report သည် ${formatRelativeTime(top.state.updatedAt)}, confidence: ${CONFIDENCE_MY[top.state.confidence]} (${top.state.confidence})။`,
+    `အနီးဆုံးဆိုင်က **${top.station.name}** ဖြစ်ပါတယ်။`,
     "",
-    ...ranked.slice(1).map(fmtStationLine),
+    stationBlock(top),
   ];
+  if (ranked.length > 1) {
+    lines.push("", "အခြားနီးစပ်တဲ့ဆိုင်များ:");
+    for (const r of ranked.slice(1)) {
+      lines.push(`• ${r.station.name} — ${r.distanceKm.toFixed(1)} km · ${STATUS_MY[r.state.status]} · ${QUEUE_MY[r.state.queue ?? "No Queue"]}`);
+    }
+  }
   return {
     text: lines.join("\n"),
-    refs: ranked.map((r) => ({
-      stationId: r.station.id,
-      stationName: r.station.name,
-      fuelType: fuel,
-    })),
-    disclaimer: "Based on community reports · အသိုင်းအဝိုင်း အစီရင်ခံစာများပေါ်တွင် အခြေခံသည်။",
+    refs: ranked.map((r) => ({ stationId: r.station.id, stationName: r.station.name, fuelType: fuel })),
+    disclaimer: DISCLAIMER,
   };
 }
 
-function replyShortestQueue(
-  fuel: FuelType | null,
-  ctx: AssistantContext,
-): AssistantReply {
+function replyShortestQueue(fuel: FuelType | null, ctx: AssistantContext): AssistantReply {
   if (!fuel) return replyFind(fuel, ctx);
   const ranked = rankForFuel(fuel, ctx.stations, ctx.reports, ctx.origin);
   if (ranked.length === 0) {
-    return { text: `${fuel} အတွက် ဖွင့်ထားသော ဆိုင် မတွေ့ရပါ။`, refs: [] };
+    return { text: `${fuel} အတွက် ဖွင့်ထားသော ဆိုင် မတွေ့ရပါ။`, refs: [], disclaimer: DISCLAIMER };
   }
-  const sorted = [...ranked].sort((a, b) => {
-    const qa = a.state.queue ?? "No Queue";
-    const qb = b.state.queue ?? "No Queue";
-    const order = ["No Queue", "Short", "Medium", "Long"];
-    return order.indexOf(qa) - order.indexOf(qb);
-  });
+  const order: QueueStatus[] = ["No Queue", "Short", "Medium", "Long"];
+  const sorted = [...ranked].sort(
+    (a, b) => order.indexOf(a.state.queue ?? "No Queue") - order.indexOf(b.state.queue ?? "No Queue"),
+  );
   const top = sorted[0];
   return {
     text: [
-      `တန်းစီ အတိုဆုံးက **${top.station.name}** ${fuel} — ${top.state.queue ?? "No Queue"}, ${top.distanceKm.toFixed(1)} km, ${formatRelativeTime(top.state.updatedAt)}။`,
+      `တန်းစီ အတိုဆုံးက **${top.station.name}** (${fuel}) ဖြစ်ပါတယ်။`,
       "",
-      ...sorted.slice(1, 3).map(fmtStationLine),
+      stationBlock(top),
     ].join("\n"),
-    refs: sorted.slice(0, 3).map((r) => ({
-      stationId: r.station.id,
-      stationName: r.station.name,
-      fuelType: fuel,
-    })),
-    disclaimer: "Based on community reports.",
+    refs: sorted.slice(0, 3).map((r) => ({ stationId: r.station.id, stationName: r.station.name, fuelType: fuel })),
+    disclaimer: DISCLAIMER,
   };
 }
 
 function replyExplain(fuel: FuelType | null, ctx: AssistantContext): AssistantReply {
   if (!fuel) {
     return {
-      text: "ဘယ် fuel အတွက် ရှင်းပြရမလဲ ခင်ဗျာ? 92, 95, Diesel, Premium Diesel ကို ရွေးပေးပါ။",
+      text: "ဘယ်ဆီအမျိုးအစား အတွက် ရှင်းပြရမလဲ ခင်ဗျာ? (92, 95, Diesel, Premium Diesel)",
       refs: [],
     };
   }
   const ranked = rankForFuel(fuel, ctx.stations, ctx.reports, ctx.origin);
   const top = ranked[0];
-  if (!top) return { text: `${fuel} အတွက် recommend လုပ်နိုင်သည့် ဆိုင် မတွေ့ရပါ။`, refs: [] };
-
-  const checks: string[] = [];
-  checks.push(`✓ ${top.state.status} (community reports)`);
-  checks.push(`✓ ${top.distanceKm.toFixed(1)} km အနီး`);
-  checks.push(`✓ တန်းစီ: ${top.state.queue ?? "No Queue"}`);
-  checks.push(`✓ Confidence: ${CONFIDENCE_MY[top.state.confidence]}`);
-  checks.push(`✓ Update: ${formatRelativeTime(top.state.updatedAt)}`);
+  if (!top) return { text: `${fuel} အတွက် အကြံပြုနိုင်တဲ့ ဆိုင် မတွေ့ရပါ။`, refs: [], disclaimer: DISCLAIMER };
 
   return {
     text: [
-      `**${top.station.name}** ကို အကြံပြုရသည့် အကြောင်းရင်း:`,
+      `**${top.station.name}** ကို အကြံပြုထားရတဲ့ အကြောင်းများ:`,
       "",
-      ...checks,
+      `✓ သင့်တည်နေရာနှင့် နီးပါသည် (${top.distanceKm.toFixed(1)} km)`,
+      `✓ ဆီအခြေအနေ — ${STATUS_MY[top.state.status]}`,
+      `✓ တန်းစီချိန် — ${QUEUE_MY[top.state.queue ?? "No Queue"]}`,
+      `✓ Community ယုံကြည်မှုအဆင့် — ${CONFIDENCE_MY[top.state.confidence]}`,
+      `✓ နောက်ဆုံး update — ${formatRelativeTime(top.state.updatedAt)}`,
     ].join("\n"),
-    refs: [
-      { stationId: top.station.id, stationName: top.station.name, fuelType: fuel },
-    ],
-    disclaimer: "Ranking: availability → queue → freshness → distance → confirmations.",
+    refs: [{ stationId: top.station.id, stationName: top.station.name, fuelType: fuel }],
+    disclaimer: DISCLAIMER,
   };
 }
 
-function replyConfidence(
-  fuel: FuelType | null,
-  ctx: AssistantContext,
-): AssistantReply {
+function replyConfidence(fuel: FuelType | null, ctx: AssistantContext): AssistantReply {
   if (!fuel) {
     return {
-      text: "ဘယ်ဆီ (92, 95, Diesel, Premium Diesel) အတွက် confidence ကို စစ်ချင်တာလဲ ခင်ဗျာ?",
+      text: "ဘယ်ဆီ (92, 95, Diesel, Premium Diesel) အတွက် ယုံကြည်မှုအဆင့်ကို စစ်ချင်တာလဲ ခင်ဗျာ?",
       refs: [],
     };
   }
   const ranked = rankForFuel(fuel, ctx.stations, ctx.reports, ctx.origin);
   const top = ranked[0];
-  if (!top) return { text: `${fuel} အတွက် data မတွေ့ရပါ။`, refs: [] };
+  if (!top) return { text: `${fuel} အတွက် data မတွေ့ရပါ။`, refs: [], disclaimer: DISCLAIMER };
   const s = top.state;
   return {
     text: [
-      `**${top.station.name}** ${fuel} status confidence: **${CONFIDENCE_MY[s.confidence]} (${s.confidence})**`,
+      `**${top.station.name}** (${fuel}) ရဲ့ အချက်အလက်မှာ ယုံကြည်မှုအဆင့် — **${CONFIDENCE_MY[s.confidence]}** ရှိပါတယ်။`,
       "",
-      `• Community confirmations: ${s.confirmations}`,
-      `• နောက်ဆုံး update: ${formatRelativeTime(s.updatedAt)}`,
-      `• ကွဲလွဲသည့် reports: ${s.conflicting}`,
+      "အကြောင်းရင်းများ:",
+      `✓ နောက်ဆုံး update — ${formatRelativeTime(s.updatedAt)}`,
+      `✓ Community report — ${s.confirmations} ခု အတည်ပြုထားသည်`,
+      `✓ ကွဲလွဲသည့် report — ${s.conflicting} ခု`,
       "",
-      "အခြေအနေများ လျင်မြန်စွာ ပြောင်းလဲနိုင်ပါသည်။",
+      "မှတ်ချက်: ဆီဆိုင်အခြေအနေများသည် အချိန်နှင့်အမျှ ပြောင်းလဲနိုင်ပါသည်။",
     ].join("\n"),
-    refs: [
-      { stationId: top.station.id, stationName: top.station.name, fuelType: fuel },
-    ],
-    disclaimer: "Based on community reports.",
+    refs: [{ stationId: top.station.id, stationName: top.station.name, fuelType: fuel }],
+    disclaimer: DISCLAIMER,
   };
 }
 
 function replyCompare(fuel: FuelType | null, ctx: AssistantContext): AssistantReply {
   if (!fuel) {
-    return {
-      text: "ဘယ်ဆီအမျိုးအစား နှိုင်းချင်တာလဲ ခင်ဗျာ?",
-      refs: [],
-    };
+    return { text: "ဘယ်ဆီအမျိုးအစား နှိုင်းယှဉ်ချင်တာလဲ ခင်ဗျာ? (92, 95, Diesel, Premium Diesel)", refs: [] };
   }
   const ranked = rankForFuel(fuel, ctx.stations, ctx.reports, ctx.origin).slice(0, 2);
   if (ranked.length < 2) {
-    return { text: `နှိုင်းယှဉ်ရန် ${fuel} ဆိုင် ၂ ခု မတွေ့ရပါ။`, refs: [] };
+    return { text: `နှိုင်းယှဉ်ရန် ${fuel} ဆိုင် ၂ ခု မတွေ့ရပါ။`, refs: [], disclaimer: DISCLAIMER };
   }
   const [a, b] = ranked;
-  const block = (r: RankedStation) =>
-    [
-      `**${r.station.name}**`,
-      `  • ${r.distanceKm.toFixed(1)} km`,
-      `  • ${r.state.status}, ${r.state.queue ?? "No Queue"}`,
-      `  • Confidence: ${CONFIDENCE_MY[r.state.confidence]}`,
-      `  • Update: ${formatRelativeTime(r.state.updatedAt)}`,
-    ].join("\n");
   return {
-    text: [block(a), "", block(b)].join("\n"),
-    refs: ranked.map((r) => ({
-      stationId: r.station.id,
-      stationName: r.station.name,
-      fuelType: fuel,
-    })),
-    disclaimer: "Based on community reports.",
+    text: [
+      `**ဆိုင် A — ${a.station.name}**`,
+      stationBlock(a),
+      "",
+      `**ဆိုင် B — ${b.station.name}**`,
+      stationBlock(b),
+    ].join("\n"),
+    refs: ranked.map((r) => ({ stationId: r.station.id, stationName: r.station.name, fuelType: fuel })),
+    disclaimer: DISCLAIMER,
   };
 }
 
@@ -262,11 +255,12 @@ export function buildReply(intent: Intent, ctx: AssistantContext): AssistantRepl
     default:
       return {
         text: [
-          "မင်္ဂလာပါ! ကျွန်ုပ်က ဆီရှာဖွေရေး လက်ထောက်ပါ။",
+          "မင်္ဂလာပါ! ကျွန်ုပ်က **ဆီရှာဖွေရေး လက်ထောက်** ပါ။",
           "အောက်ပါတို့ကို မေးနိုင်ပါသည်:",
-          "• အနီးဆုံး Diesel/92/95 ဆိုင်",
+          "",
+          "• အနီးဆုံး Diesel/92/95 ဆီဆိုင်",
           "• တန်းစီ တိုတိုသည့် ဆိုင်",
-          "• Confidence ဘယ်လောက် ယုံရလဲ",
+          "• ဆိုင်ရဲ့ ယုံကြည်မှုအဆင့်",
           "• ဘာကြောင့် ဒီဆိုင်ကို အကြံပြုတာလဲ",
           "• ဆိုင်နှစ်ခု နှိုင်းယှဉ်ရန်",
         ].join("\n"),
@@ -275,11 +269,10 @@ export function buildReply(intent: Intent, ctx: AssistantContext): AssistantRepl
   }
 }
 
-// Public helper for future LLM swap: same signature, different implementation.
+// Public helper — future LLM swap point (keep signature stable).
 export function answer(text: string, ctx: AssistantContext): AssistantReply {
   return buildReply(detectIntent(text), ctx);
 }
 
-// Re-export for convenience in UI
-export { deriveFuelState, deriveStationStates };
+export { deriveFuelState, deriveStationStates, distanceKm };
 export type { FuelState };
