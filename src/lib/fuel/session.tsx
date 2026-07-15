@@ -49,8 +49,8 @@ interface SessionCtx {
   openSheet: (step?: SheetStep) => void;
   closeSheet: () => void;
   setPhone: (e164: string) => Promise<void>;
-  completeProfile: (p: Omit<Profile, "phoneE164" | "id">) => Promise<void>;
-  updateProfile: (p: Omit<Profile, "phoneE164" | "id">) => Promise<void>;
+  completeProfile: (p: Omit<Profile, "phoneE164" | "id">) => Promise<{ ok: boolean; error?: string }>;
+  updateProfile: (p: Omit<Profile, "phoneE164" | "id">) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => void;
   requireCompleteProfile: (intent: PendingIntent) => boolean;
 }
