@@ -159,13 +159,13 @@ function LeafletMap({
       })
     : null;
 
-  function Recenter({ lat, lng }: { lat: number; lng: number }) {
+  function Recenter({ lat, lng, nonce }: { lat: number; lng: number; nonce: number }) {
     const map = useMap();
     useEffect(() => {
-      map.setView([lat, lng], map.getZoom() < 13 ? 13 : map.getZoom(), {
+      map.setView([lat, lng], map.getZoom() < 14 ? 14 : map.getZoom(), {
         animate: true,
       });
-    }, [map, lat, lng]);
+    }, [map, lat, lng, nonce]);
     return null;
   }
 
