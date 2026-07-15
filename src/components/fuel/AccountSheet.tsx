@@ -87,7 +87,10 @@ export function AccountSheet() {
           <ProfileStep
             phoneE164={phoneE164}
             initial={profile ?? null}
-            onSubmit={(p) => (profile ? updateProfile(p) : completeProfile(p))}
+            onSubmit={async (p) => {
+              const res = profile ? await updateProfile(p) : await completeProfile(p);
+              return res;
+            }}
           />
         )}
         {step === "view" && profile && (
