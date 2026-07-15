@@ -30,6 +30,7 @@ function ReportPage() {
   const { stations, addReport } = useFuelStore();
   const navigate = useNavigate();
   const { profile, requireCompleteProfile, isSheetOpen } = useSession();
+  const geo = useGeolocation();
   const guardTriggered = useRef(false);
 
   // Guard access: guests must complete demo profile before reporting.
