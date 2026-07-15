@@ -170,6 +170,34 @@ function AskPage() {
     <AppShell>
       <BrandHeader subtitle="AI လမ်းညွှန် · Fuel Assistant" />
 
+      <div className="mb-2 flex items-center justify-between gap-2">
+        {signedIn ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+            <Cloud className="h-3 w-3 text-primary" aria-hidden />
+            <span>Account နဲ့ Sync</span>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => openSheet("phone")}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground hover:border-primary/40"
+          >
+            <CloudOff className="h-3 w-3" aria-hidden />
+            <span>Sign in to sync chat</span>
+          </button>
+        )}
+        {signedIn && hasHistory && (
+          <button
+            type="button"
+            onClick={clearHistory}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground hover:border-destructive/40 hover:text-destructive"
+          >
+            <Trash2 className="h-3 w-3" aria-hidden />
+            <span>Clear</span>
+          </button>
+        )}
+      </div>
+
       {!geo.coords && (
         <div className="mb-2 flex items-center gap-1.5 rounded-2xl border border-border bg-card px-3 py-2 text-[11px] text-muted-foreground">
           <MapPin className="h-3 w-3" aria-hidden />
