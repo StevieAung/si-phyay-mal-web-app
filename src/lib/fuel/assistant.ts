@@ -1,4 +1,4 @@
-import type { FuelType, Station, Report, FuelState, Confidence, FuelStatus, QueueStatus } from "./types";
+import type { FuelType, Station, Report, FuelState, Confidence, FuelStatus, QueueLength } from "./types";
 import { FUEL_TYPES } from "./types";
 import {
   deriveFuelState,
@@ -83,7 +83,7 @@ const STATUS_MY: Record<FuelStatus, string> = {
   Closed: "ပိတ်ထားသည်",
 };
 
-const QUEUE_MY: Record<QueueStatus, string> = {
+const QUEUE_MY: Record<QueueLength, string> = {
   "No Queue": "တန်းစီမရှိ",
   Short: "တိုတို",
   Medium: "အလယ်အလတ်",
@@ -149,7 +149,7 @@ function replyShortestQueue(fuel: FuelType | null, ctx: AssistantContext): Assis
   if (ranked.length === 0) {
     return { text: `${fuel} အတွက် ဖွင့်ထားသော ဆိုင် မတွေ့ရပါ။`, refs: [], disclaimer: DISCLAIMER };
   }
-  const order: QueueStatus[] = ["No Queue", "Short", "Medium", "Long"];
+  const order: QueueLength[] = ["No Queue", "Short", "Medium", "Long"];
   const sorted = [...ranked].sort(
     (a, b) => order.indexOf(a.state.queue ?? "No Queue") - order.indexOf(b.state.queue ?? "No Queue"),
   );
