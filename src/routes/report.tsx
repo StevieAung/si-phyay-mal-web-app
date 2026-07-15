@@ -133,18 +133,23 @@ function ReportPage() {
 
       <form onSubmit={submit} className="space-y-4">
         <Field label="ဆီဆိုင် · Station">
-          <select
+          <StationPicker
+            stations={stations}
             value={stationId}
-            onChange={(e) => setStationId(e.target.value)}
-            className="h-11 w-full rounded-xl border border-border bg-card px-3 text-sm"
-          >
-            {stations.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} — {s.township}
-              </option>
-            ))}
-          </select>
+            onChange={setStationId}
+            origin={geo.coords}
+          />
         </Field>
+
+        {geo.status === "idle" && (
+          <button
+            type="button"
+            onClick={() => geo.request()}
+            className="-mt-2 text-[11px] font-medium text-primary underline-offset-2 hover:underline"
+          >
+            တည်နေရာဖွင့်၍ အနီးဆုံးဆီဆိုင်များပြရန်
+          </button>
+        )}
 
         <Field label="ဆီအမျိုးအစား · Fuel type">
           <ChipGroup
