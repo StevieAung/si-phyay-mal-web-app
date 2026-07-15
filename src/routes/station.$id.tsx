@@ -139,7 +139,7 @@ function StationDetail() {
             className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-primary bg-card px-4 text-sm font-medium text-primary"
           >
             <PlusCircle className="h-4 w-4" aria-hidden />
-            အစီရင်ခံ · Report
+            ကူညီမယ်
           </button>
         </div>
       </section>
