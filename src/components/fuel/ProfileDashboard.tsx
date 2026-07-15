@@ -135,11 +135,19 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground"
+              disabled={uploading}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground disabled:opacity-60"
             >
-              <Upload className="h-3.5 w-3.5" aria-hidden />
-              ဓာတ်ပုံတင်ရန်
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : (
+                <Upload className="h-3.5 w-3.5" aria-hidden />
+              )}
+              {uploading ? "တင်နေသည်..." : "ဓာတ်ပုံတင်ရန်"}
             </button>
+            {uploadError && (
+              <p className="text-[11px] text-destructive">{uploadError}</p>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-3">
@@ -161,12 +169,20 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-primary text-xs font-semibold text-primary-foreground"
+                disabled={uploading}
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-primary text-xs font-semibold text-primary-foreground disabled:opacity-60"
               >
-                <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-                ပြန်တင်ရန်
+                {uploading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                )}
+                {uploading ? "တင်နေသည်..." : "ပြန်တင်ရန်"}
               </button>
             </div>
+            {uploadError && (
+              <p className="text-[11px] text-destructive">{uploadError}</p>
+            )}
           </div>
         )}
       </section>
