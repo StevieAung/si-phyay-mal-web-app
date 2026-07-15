@@ -1,133 +1,223 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Sparkles, Send, MapPin } from "lucide-react";
 import { AppShell, BrandHeader } from "@/components/fuel/AppShell";
 import { useFuelStore } from "@/lib/fuel/store";
-import { rankForFuel, formatRelativeTime } from "@/lib/fuel/derive";
 import { MANDALAY_CENTER } from "@/lib/fuel/stations";
-import type { FuelType } from "@/lib/fuel/types";
-import { StatusBadge } from "@/components/fuel/StatusBadge";
-import { QueueBadge } from "@/components/fuel/QueueBadge";
-
-const PROMPTS: { label: string; fuel: FuelType }[] = [
-  { label: "Diesel with the shortest queue", fuel: "Diesel" },
-  { label: "Where can I get 92?", fuel: "92" },
-  { label: "Nearest 95 station", fuel: "95" },
-  { label: "Premium Diesel nearby", fuel: "Premium Diesel" },
-];
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { answer, type AssistantReply, type StationRef } from "@/lib/fuel/assistant";
 
 export const Route = createFileRoute("/ask")({
   component: AskPage,
 });
 
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  refs?: StationRef[];
+  disclaimer?: string;
+}
+
+const SUGGESTIONS: string[] = [
+  "Nearest Diesel station",
+  "Find 95 fuel",
+  "Shortest queue for 92",
+  "How reliable is this station?",
+  "Why did you recommend this?",
+  "Compare nearby Diesel stations",
+];
+
+const WELCOME: ChatMessage = {
+  id: "welcome",
+  role: "assistant",
+  text: [
+    "မင်္ဂလာပါ! ကျွန်ုပ်က **ဆီရှာဖွေရေး လက်ထောက်** ပါ။",
+    "အနီးဆုံး ဆီဆိုင်များ၊ တန်းစီအခြေအနေ၊ confidence၊ ဘာကြောင့် အကြံပြုသည် ကို ရှင်းပြပေးနိုင်ပါသည်။",
+    "",
+    "Community reports မှသာ အခြေခံပါသည်။",
+  ].join("\n"),
+};
+
 function AskPage() {
   const { stations, reports } = useFuelStore();
-  const [fuel, setFuel] = useState<FuelType | null>(null);
+  const geo = useGeolocation();
+  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  const [input, setInput] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const ranked = useMemo(() => {
-    if (!fuel) return [];
-    return rankForFuel(fuel, stations, reports, MANDALAY_CENTER).slice(0, 3);
-  }, [fuel, stations, reports]);
+  const ctx = useMemo(
+    () => ({
+      stations,
+      reports,
+      origin: geo.coords ?? MANDALAY_CENTER,
+      hasUserLocation: !!geo.coords,
+    }),
+    [stations, reports, geo.coords],
+  );
 
-  const top = ranked[0];
+  useEffect(() => {
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages]);
+
+  function send(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const userMsg: ChatMessage = {
+      id: `u-${Date.now()}`,
+      role: "user",
+      text: trimmed,
+    };
+    const reply: AssistantReply = answer(trimmed, ctx);
+    const aiMsg: ChatMessage = {
+      id: `a-${Date.now()}`,
+      role: "assistant",
+      text: reply.text,
+      refs: reply.refs,
+      disclaimer: reply.disclaimer,
+    };
+    setMessages((m) => [...m, userMsg, aiMsg]);
+    setInput("");
+  }
 
   return (
     <AppShell>
-      <BrandHeader subtitle="မေးမြန်း · Ask the community assistant" />
+      <BrandHeader subtitle="AI လမ်းညွှန် · Fuel Assistant" />
 
-      <div className="rounded-2xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Sparkles className="h-4 w-4" aria-hidden />
-          </span>
-          <p className="text-sm text-foreground">
-            မင်္ဂလာပါ! ဘယ်ဆီရှာနေတာလဲ? · Which fuel are you looking for?
-          </p>
+      {!geo.coords && (
+        <div className="mb-2 flex items-center gap-1.5 rounded-2xl border border-border bg-card px-3 py-2 text-[11px] text-muted-foreground">
+          <MapPin className="h-3 w-3" aria-hidden />
+          <span>တည်နေရာ မဖွင့်ရသေးပါ · Using Mandalay center</span>
         </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {PROMPTS.map((p) => (
-            <button
-              key={p.label}
-              onClick={() => setFuel(p.fuel)}
-              className={`h-10 rounded-full border px-3 text-sm font-medium ${
-                fuel === p.fuel
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-foreground"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+      )}
+
+      <div
+        ref={scrollRef}
+        className="flex-1 space-y-3 overflow-y-auto pb-3"
+        aria-live="polite"
+      >
+        {messages.map((m) => (
+          <MessageBubble key={m.id} msg={m} />
+        ))}
       </div>
 
-      {fuel && top ? (
-        <div className="mt-4 rounded-2xl border border-primary/40 bg-card p-4">
-          <p className="text-xs uppercase tracking-wide text-primary">
-            Recommendation · အကြံပြုချက်
-          </p>
-          <h2 className="mt-1 text-lg font-bold text-foreground">
-            {top.station.name}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            {top.station.township} · {top.distanceKm.toFixed(1)} km
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="rounded-md bg-secondary px-1.5 py-0.5 text-xs font-medium text-secondary-foreground">
-              {fuel}
-            </span>
-            <StatusBadge status={top.state.status} size="sm" />
-            {top.state.queue ? <QueueBadge queue={top.state.queue} /> : null}
-          </div>
-          <p className="mt-3 text-sm text-foreground">
-            I recommend <strong>{top.station.name}</strong> — it has{" "}
-            <strong>{top.state.queue ?? "no queue"}</strong> for {fuel},
-            last updated {formatRelativeTime(top.state.updatedAt)}, with{" "}
-            {top.state.confirmations} matching community confirmation
-            {top.state.confirmations === 1 ? "" : "s"}.
-          </p>
-          <Link
-            to="/station/$id"
-            params={{ id: top.station.id }}
-            className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
+      {/* Suggested prompts */}
+      <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto pb-2">
+        {SUGGESTIONS.map((s) => (
+          <button
+            key={s}
+            onClick={() => send(s)}
+            className="h-9 shrink-0 rounded-full border border-border bg-card px-3 text-[12px] font-medium text-foreground hover:border-primary/40"
           >
-            View station
-          </Link>
-          <p className="mt-3 text-[11px] text-muted-foreground">
-            Based on community reports · အသိုင်းအဝိုင်း အစီရင်ခံစာများပေါ်တွင် အခြေခံသည်။
-          </p>
+            {s}
+          </button>
+        ))}
+      </div>
 
-          {ranked.length > 1 ? (
-            <div className="mt-4 border-t border-border pt-3">
-              <p className="mb-2 text-xs font-semibold text-muted-foreground">
-                Also consider
-              </p>
-              <ul className="space-y-2">
-                {ranked.slice(1).map((r) => (
-                  <li key={r.station.id}>
-                    <Link
-                      to="/station/$id"
-                      params={{ id: r.station.id }}
-                      className="flex items-center justify-between rounded-xl border border-border bg-card p-2.5 text-sm"
-                    >
-                      <span className="min-w-0 flex-1 truncate pr-2">
-                        {r.station.name}
-                      </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {r.state.queue ?? "No queue"} · {r.distanceKm.toFixed(1)} km
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : fuel ? (
-        <div className="mt-4 rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-          No open stations reporting {fuel} right now. Try another fuel type.
-        </div>
-      ) : null}
+      {/* Composer */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          send(input);
+        }}
+        className="sticky bottom-0 flex items-center gap-2 rounded-full border border-border bg-card px-2 py-1.5 shadow-sm"
+      >
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="မေးမြန်းရန်... e.g. Nearest 95 station"
+          className="h-10 flex-1 bg-transparent px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+          style={{ fontSize: 16 }}
+        />
+        <button
+          type="submit"
+          aria-label="Send"
+          disabled={!input.trim()}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
+        >
+          <Send className="h-4 w-4" aria-hidden />
+        </button>
+      </form>
     </AppShell>
   );
+}
+
+function MessageBubble({ msg }: { msg: ChatMessage }) {
+  const isUser = msg.role === "user";
+  if (isUser) {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground shadow-sm">
+          {msg.text}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-start gap-2">
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+        <Sparkles className="h-4 w-4" aria-hidden />
+      </span>
+      <div className="min-w-0 max-w-[85%] flex-1">
+        <div className="rounded-2xl rounded-tl-sm border border-border bg-card px-3.5 py-2.5 text-sm text-foreground">
+          <FormattedText text={msg.text} />
+          {msg.refs && msg.refs.length > 0 && (
+            <div className="mt-2.5 space-y-1.5 border-t border-border pt-2.5">
+              {msg.refs.map((r) => (
+                <Link
+                  key={`${r.stationId}-${r.fuelType}`}
+                  to="/station/$id"
+                  params={{ id: r.stationId }}
+                  className="flex items-center justify-between rounded-xl border border-border bg-background px-2.5 py-1.5 text-[12px] hover:border-primary/40"
+                >
+                  <span className="min-w-0 truncate pr-2 font-medium text-foreground">
+                    {r.stationName}
+                  </span>
+                  <span className="shrink-0 rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-semibold text-secondary-foreground">
+                    {r.fuelType}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+        {msg.disclaimer && (
+          <p className="mt-1 px-1 text-[10px] text-muted-foreground">
+            {msg.disclaimer}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FormattedText({ text }: { text: string }) {
+  // Minimal renderer: **bold** and line breaks. No external deps.
+  const lines = text.split("\n");
+  return (
+    <div className="whitespace-pre-wrap break-words">
+      {lines.map((line, i) => (
+        <div key={i} className={line === "" ? "h-2" : ""}>
+          {renderInline(line)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function renderInline(line: string) {
+  const parts = line.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((p, i) => {
+    if (p.startsWith("**") && p.endsWith("**")) {
+      return (
+        <strong key={i} className="font-semibold text-foreground">
+          {p.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={i}>{p}</span>;
+  });
 }
