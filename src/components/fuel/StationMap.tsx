@@ -22,6 +22,7 @@ export function StationMap({
   userLocation,
   radiusKm,
   heightClass = "h-full",
+  recenterNonce = 0,
 }: {
   pins: Pin[];
   center: { lat: number; lng: number };
@@ -29,6 +30,7 @@ export function StationMap({
   userLocation?: { lat: number; lng: number } | null;
   radiusKm?: number | null;
   heightClass?: string;
+  recenterNonce?: number;
 }) {
   const [mounted, setMounted] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -47,11 +49,12 @@ export function StationMap({
         selectedId={selectedId}
         userLocation={userLocation ?? null}
         radiusKm={radiusKm ?? null}
+        recenterNonce={recenterNonce}
         onSelect={(id) => navigate({ to: "/station/$id", params: { id } })}
         onFail={() => setFailed(true)}
       />
     );
-  }, [mounted, pins, center, selectedId, userLocation, radiusKm, navigate]);
+  }, [mounted, pins, center, selectedId, userLocation, radiusKm, recenterNonce, navigate]);
 
   return (
     <div className={`relative w-full overflow-hidden bg-secondary ${heightClass}`}>
@@ -100,6 +103,7 @@ function LeafletMap({
   selectedId,
   userLocation,
   radiusKm,
+  recenterNonce,
   onSelect,
   onFail,
 }: {
@@ -108,6 +112,7 @@ function LeafletMap({
   selectedId?: string;
   userLocation: { lat: number; lng: number } | null;
   radiusKm: number | null;
+  recenterNonce: number;
   onSelect: (id: string) => void;
   onFail: () => void;
 }) {
@@ -154,13 +159,13 @@ function LeafletMap({
       })
     : null;
 
-  function Recenter({ lat, lng }: { lat: number; lng: number }) {
+  function Recenter({ lat, lng, nonce }: { lat: number; lng: number; nonce: number }) {
     const map = useMap();
     useEffect(() => {
-      map.setView([lat, lng], map.getZoom() < 13 ? 13 : map.getZoom(), {
+      map.setView([lat, lng], map.getZoom() < 14 ? 14 : map.getZoom(), {
         animate: true,
       });
-    }, [map, lat, lng]);
+    }, [map, lat, lng, nonce]);
     return null;
   }
 
@@ -175,7 +180,7 @@ function LeafletMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {userLocation ? <Recenter lat={userLocation.lat} lng={userLocation.lng} /> : null}
+      {userLocation ? <Recenter lat={userLocation.lat} lng={userLocation.lng} nonce={recenterNonce} /> : null}
       {userLocation && radiusKm && radiusKm > 0 ? (
         <Circle
           center={[userLocation.lat, userLocation.lng]}

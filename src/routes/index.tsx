@@ -63,6 +63,7 @@ function DiscoverPage() {
   const [showExplainer, setShowExplainer] = useState(false);
   const [explainerDismissed, setExplainerDismissed] = useState(false);
   const [showAllNearby, setShowAllNearby] = useState(false);
+  const [recenterNonce, setRecenterNonce] = useState(0);
   const geo = useGeolocation();
   const { profile, openSheet, requireCompleteProfile } = useSession();
   const { entries: fills, addFill } = useFillHistory();
@@ -73,6 +74,14 @@ function DiscoverPage() {
       kind: "confirm",
       onResume: () => setLogOpen(true),
     });
+  }
+
+  function onTapLocate() {
+    if (geo.coords) {
+      setRecenterNonce((n) => n + 1);
+    } else {
+      setShowExplainer(true);
+    }
   }
 
   // Show the in-app explanation on first Discover visit only.
@@ -224,38 +233,57 @@ function DiscoverPage() {
 
         {/* Map + sheet */}
         <section className="relative flex-1">
-          <div className="relative h-[52vh] min-h-[320px] w-full overflow-hidden border-y border-border">
-            <StationMap
-              pins={pins}
-              center={geo.coords ?? MANDALAY_CENTER}
-              userLocation={geo.coords}
-              radiusKm={radiusActive ? (radius as number) : null}
-            />
+          <div className="px-4">
+            <div className="relative h-[52vh] min-h-[320px] w-full overflow-hidden rounded-3xl border border-border bg-card shadow-[0_8px_24px_-12px_rgba(24,32,43,0.18)]">
+              <StationMap
+                pins={pins}
+                center={geo.coords ?? MANDALAY_CENTER}
+                userLocation={geo.coords}
+                radiusKm={radiusActive ? (radius as number) : null}
+                recenterNonce={recenterNonce}
+              />
 
-            {/* Legend */}
-            <div className="pointer-events-none absolute bottom-3 left-3 z-[400] rounded-2xl border border-border bg-card/90 px-3 py-2 text-[11px] shadow-md backdrop-blur-sm">
-              <ul className="grid grid-cols-2 gap-x-3 gap-y-1">
-                {FUEL_STATUSES.map((s) => (
-                  <li key={s} className="flex items-center gap-1.5">
-                    <span
-                      className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_META[s].dot}`}
-                      aria-hidden
-                    />
-                    <span className="text-foreground">{LEGEND_LABEL[s]}</span>
-                  </li>
-                ))}
-              </ul>
+              {/* Legend */}
+              <div className="pointer-events-none absolute bottom-3 left-3 z-[400] rounded-2xl border border-border bg-card/90 px-3 py-2 text-[11px] shadow-md backdrop-blur-sm">
+                <ul className="grid grid-cols-2 gap-x-3 gap-y-1">
+                  {FUEL_STATUSES.map((s) => (
+                    <li key={s} className="flex items-center gap-1.5">
+                      <span
+                        className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_META[s].dot}`}
+                        aria-hidden
+                      />
+                      <span className="text-foreground">{LEGEND_LABEL[s]}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <Link
+                to="/ask"
+                className="absolute right-3 top-3 z-[400] inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                aria-label="Ask assistant"
+              >
+                <Sparkles className="h-4 w-4" aria-hidden />
+                <span>AI လမ်းညွှန်</span>
+              </Link>
+
+              {/* Recenter to current location */}
+              <button
+                type="button"
+                onClick={onTapLocate}
+                aria-label="ကျွန်ုပ်တည်နေရာသို့ ပြန်သွားရန် · Recenter"
+                className={`absolute bottom-3 right-3 z-[400] grid h-11 w-11 place-items-center rounded-full border border-border bg-card shadow-md transition hover:border-primary/40 ${
+                  geo.status === "requesting" ? "animate-pulse" : ""
+                }`}
+              >
+                <Locate
+                  className={`h-5 w-5 ${geo.coords ? "text-primary" : "text-muted-foreground"}`}
+                  aria-hidden
+                />
+              </button>
             </div>
-
-            <Link
-              to="/ask"
-              className="absolute right-3 top-3 z-[400] inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              aria-label="Ask assistant"
-            >
-              <Sparkles className="h-4 w-4" aria-hidden />
-              <span>AI လမ်းညွှန်</span>
-            </Link>
           </div>
+
 
           {/* Nearby stations sheet */}
           <div className="relative -mt-6 rounded-t-[28px] border-t border-border bg-background pb-[calc(7rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_-12px_rgba(24,32,43,0.15)]">
