@@ -180,7 +180,7 @@ function LeafletMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {userLocation ? <Recenter lat={userLocation.lat} lng={userLocation.lng} /> : null}
+      {userLocation ? <Recenter lat={userLocation.lat} lng={userLocation.lng} nonce={recenterNonce} /> : null}
       {userLocation && radiusKm && radiusKm > 0 ? (
         <Circle
           center={[userLocation.lat, userLocation.lng]}
