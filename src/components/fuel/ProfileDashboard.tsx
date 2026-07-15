@@ -117,37 +117,32 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
         )}
       </section>
 
-      {/* ---------- Parity + Fuel Permission (side-by-side) ---------- */}
-      <section className="grid grid-cols-2 gap-2">
-        <div className="rounded-2xl border border-border bg-background/60 p-3">
-          <p className="text-[11px] text-muted-foreground">စုံ / မ</p>
-          <p className="mt-1">
-            <span
-              className={`inline-block rounded-full px-2.5 py-0.5 text-sm font-bold ${
-                profile.parity === "စုံ"
-                  ? "bg-available/15 text-available"
-                  : "bg-primary/15 text-primary"
-              }`}
-            >
-              {profile.parity}
-            </span>
-          </p>
+      {/* ---------- Parity + Fuel Permission (unified) ---------- */}
+      <section className="rounded-2xl border border-border bg-background/60 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-muted-foreground">စုံ / မ · ဆီဖြည့်ခွင့်</p>
+          <span className="rounded-full border border-border bg-background px-1.5 py-0.5 text-[9px] text-muted-foreground">
+            {todayLabel}
+          </span>
         </div>
-        <div className="rounded-2xl border border-border bg-background/60 p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] text-muted-foreground">ဆီဖြည့်ခွင့်</p>
-            <span className="rounded-full border border-border bg-background px-1.5 py-0.5 text-[9px] text-muted-foreground">
-              {todayLabel} · {todayParity}
-            </span>
-          </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span
+            className={`inline-block rounded-full px-2.5 py-0.5 text-sm font-bold ${
+              profile.parity === "စုံ"
+                ? "bg-available/15 text-available"
+                : "bg-primary/15 text-primary"
+            }`}
+          >
+            {profile.parity}
+          </span>
           {permission === "allowed" ? (
-            <p className="mt-1 text-[12px] font-semibold text-available">
+            <span className="text-[12px] font-semibold text-available">
               🟢 ယနေ့ ဆီဖြည့်နိုင်ပါသည်
-            </p>
+            </span>
           ) : (
-            <p className="mt-1 text-[12px] font-semibold text-soldout">
+            <span className="text-[12px] font-semibold text-soldout">
               🔴 ယနေ့ ဆီဖြည့်၍မရပါ
-            </p>
+            </span>
           )}
         </div>
       </section>
