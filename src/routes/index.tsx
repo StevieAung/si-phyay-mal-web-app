@@ -63,6 +63,7 @@ function DiscoverPage() {
   const [showExplainer, setShowExplainer] = useState(false);
   const [explainerDismissed, setExplainerDismissed] = useState(false);
   const [showAllNearby, setShowAllNearby] = useState(false);
+  const [recenterNonce, setRecenterNonce] = useState(0);
   const geo = useGeolocation();
   const { profile, openSheet, requireCompleteProfile } = useSession();
   const { entries: fills, addFill } = useFillHistory();
@@ -73,6 +74,14 @@ function DiscoverPage() {
       kind: "confirm",
       onResume: () => setLogOpen(true),
     });
+  }
+
+  function onTapLocate() {
+    if (geo.coords) {
+      setRecenterNonce((n) => n + 1);
+    } else {
+      setShowExplainer(true);
+    }
   }
 
   // Show the in-app explanation on first Discover visit only.
