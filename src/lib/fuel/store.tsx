@@ -308,32 +308,56 @@ export function FuelProvider({ children }: { children: ReactNode }) {
       setReports((prev) => [optimistic, ...prev]);
 
       // Persist to Lovable Cloud, tying the row to the submitting profile.
+      // NOTE: reports table denies SELECT for anon/authenticated (reads go through
+      // the reports_public view), so we intentionally do NOT chain .select() here.
       (async () => {
-        const { data, error } = await supabase
-          .from("reports")
-          .insert({
-            station_id: stationId,
-            fuel_type: fuelType,
-            status,
-            queue_level: effectiveQueue,
-            profile_id: profileId,
-          })
-          .select("id, created_at")
-          .single();
-        if (error || !data) {
-          // Roll back the optimistic entry on failure.
+        const { error } = await supabase.from("reports").insert({
+          station_id: stationId,
+          fuel_type: fuelType,
+          status,
+          queue_level: effectiveQueue,
+          profile_id: profileId,
+        });
+        if (error) {
           console.error("[reports] insert failed", error);
           setReports((prev) => prev.filter((r) => r.id !== tempId));
           return;
         }
-        const ts = new Date(data.created_at).getTime();
-        setReports((prev) =>
-          prev.map((r) =>
-            r.id === tempId
-              ? { ...r, id: data.id, timestamp: ts, createdAt: ts }
-              : r,
-          ),
-        );
+        // Refresh from the public view to pick up the real row id + timestamp
+        // and any other new reports.
+        const { data: rows } = await supabase
+          .from("reports_public")
+          .select("id, station_id, fuel_type, status, queue_level, created_at")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (!rows) return;
+        const mapped: Report[] = [];
+        for (const row of rows) {
+          if (!row.id || !row.station_id || !row.created_at) continue;
+          const ft = row.fuel_type as FuelType;
+          const st = row.status as FuelStatus;
+          if (!FUEL_TYPES.includes(ft) || !FUEL_STATUSES.includes(st)) continue;
+          const q = row.queue_level as QueueLength | null;
+          const queue =
+            st === "Closed" || st === "Sold Out"
+              ? null
+              : q && QUEUE_LENGTHS.includes(q)
+                ? q
+                : null;
+          const ts = new Date(row.created_at).getTime();
+          mapped.push({
+            id: row.id,
+            stationId: row.station_id,
+            fuelType: ft,
+            status: st,
+            queue,
+            timestamp: ts,
+            createdAt: ts,
+            deviceId: "anon",
+            confirmationCount: 0,
+          });
+        }
+        setReports(mapped);
       })();
     },
     [deviceId],
