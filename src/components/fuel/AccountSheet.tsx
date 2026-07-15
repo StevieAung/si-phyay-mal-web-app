@@ -5,6 +5,9 @@ import { useSession, type VehicleType, type FuelPref } from "@/lib/fuel/session"
 import { maskPhone, normalizeMyanmarPhone } from "@/lib/fuel/phone";
 import { PARITY_POLICY_NOTE, parsePlate, type PlateParity } from "@/lib/fuel/plate";
 
+type FuelPermission = "allowed" | "blocked";
+
+
 
 export function AccountSheet() {
   const {
