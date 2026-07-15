@@ -33,16 +33,16 @@ export const Route = createFileRoute("/")({
 });
 
 const STATUS_META: Record<FuelStatus, { my: string; dot: string }> = {
-  Available: { my: "ရနိုင်သည်", dot: "bg-available" },
-  Limited: { my: "အနည်းငယ်ရှိ", dot: "bg-limited" },
-  "Sold Out": { my: "ကုန်ဆုံး", dot: "bg-soldout" },
+  Available: { my: "ရရှိနိုင်သည်", dot: "bg-available" },
+  Limited: { my: "အကန့်အသတ်ရှိ", dot: "bg-limited" },
+  "Sold Out": { my: "ကုန်နေပြီ", dot: "bg-soldout" },
   Closed: { my: "ပိတ်ထားသည်", dot: "bg-closed" },
 };
 
 const LEGEND_LABEL: Record<FuelStatus, string> = {
   Available: "ရရှိနိုင်သည်",
-  Limited: "အကန့်အသတ်",
-  "Sold Out": "ရောင်းကုန်",
+  Limited: "အကန့်အသတ်ရှိ",
+  "Sold Out": "ကုန်နေပြီ",
   Closed: "ပိတ်ထားသည်",
 };
 
