@@ -185,7 +185,7 @@ function ProfileStep({
     parity: PlateParity;
     fuelType: FuelPref;
     engineCc: number;
-  }) => void;
+  }) => Promise<{ ok: boolean; error?: string }>;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [vehicle, setVehicle] = useState<VehicleType>(initial?.vehicle ?? "ကား");
@@ -197,20 +197,23 @@ function ProfileStep({
   const [privateOk, setPrivateOk] = useState(false);
   const [consentOk, setConsentOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const plateInfo = useMemo(() => parsePlate(plate), [plate]);
   const ccNum = Number(engineCc);
   const ccValid = engineCc.trim() !== "" && Number.isFinite(ccNum) && ccNum > 0;
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     if (!name.trim()) return setError("နာမည်ဖြည့်ပါ · Please enter your name.");
     if (!plateInfo.ok) return setError(plateInfo.error);
     if (!ccValid) return setError("Engine CC ကို မှန်ကန်စွာ ထည့်ပါ");
     if (!privateOk) return setError("Private vehicle checkbox is required.");
     if (!consentOk) return setError("သဘောတူညီချက်လိုအပ်သည် · Consent required.");
     setError(null);
-    onSubmit({
+    setSubmitting(true);
+    const res = await onSubmit({
       name: name.trim(),
       vehicle,
       plate: plateInfo.normalized,
@@ -218,6 +221,8 @@ function ProfileStep({
       fuelType,
       engineCc: ccNum,
     });
+    setSubmitting(false);
+    if (!res.ok) setError(res.error ?? "Something went wrong. Please try again.");
   }
 
   const fuelOptions: FuelPref[] = ["92", "95", "Diesel"];
