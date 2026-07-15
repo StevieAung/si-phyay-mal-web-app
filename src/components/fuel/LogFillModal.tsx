@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { X, Fuel } from "lucide-react";
 import type { Station, FuelType } from "@/lib/fuel/types";
 import type { FillEntry } from "@/lib/fuel/fillHistory";
+import { StationPicker } from "@/components/fuel/StationPicker";
+import { useGeolocation } from "@/hooks/useGeolocation";
 
 export function LogFillModal({
   stations,
