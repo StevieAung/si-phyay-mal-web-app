@@ -19,17 +19,17 @@ export type PlateParseResult =
   | { ok: false; error: string };
 
 /**
- * Extract the two numeric digits immediately before the first alphabetic
+ * Extract one or two numeric digits immediately before the first alphabetic
  * segment. Never fall back to another digit block.
  */
 export function parsePlate(input: string): PlateParseResult {
   const normalized = normalizePlateDigits(input.trim());
-  const m = normalized.match(/(\d{2})[A-Za-z]/);
+  const m = normalized.match(/^(\d{1,2})[A-Za-z]-?\d+$/);
   if (!m) {
     return {
       ok: false,
       error:
-        "ဥပမာ 73W-15376 ကဲ့သို့ စာလုံးရှေ့ ဂဏန်း ၂ လုံး ရှိရမည် · Two digits must appear immediately before a letter (e.g. 73W-15376).",
+        "ဥပမာ 7W-1234 (သို့မဟုတ်) 73W-15376 ကဲ့သို့ စာလုံးရှေ့ ဂဏန်း ၁-၂ လုံး ရှိရမည် · One or two digits must appear immediately before a letter (e.g. 7W-1234 or 73W-15376).",
     };
   }
   const prefix = parseInt(m[1], 10);
