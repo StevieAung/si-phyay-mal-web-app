@@ -3,18 +3,9 @@ import { X, Upload, Eye, RefreshCw, QrCode, Fuel, Calculator, History, Bike, Car
 import type { Profile } from "@/lib/fuel/session";
 import { useSession } from "@/lib/fuel/session";
 import { computeAllowance } from "@/lib/fuel/allowance";
-import { supabase } from "@/integrations/supabase/client";
-
-const QR_BUCKET = "vehicle-qr";
-
-async function pathToBlobUrl(path: string): Promise<string | null> {
-  const { data, error } = await supabase.storage.from(QR_BUCKET).download(path);
-  if (error || !data) return null;
-  return URL.createObjectURL(data);
-}
 
 export function ProfileDashboard({ profile }: { profile: Profile }) {
-  const { setQrCodePath } = useSession();
+  const { uploadQrCode, getQrSignedUrl } = useSession();
 
   // ---------- QR upload ----------
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -24,29 +15,21 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  // Load existing QR from storage whenever the stored path changes.
+  // Load existing QR via a short-lived signed URL whenever the stored path changes.
   useEffect(() => {
-    let revoked: string | null = null;
     let cancelled = false;
     if (!profile.qrCodePath) {
       setQrDataUrl(null);
       return;
     }
-    void pathToBlobUrl(profile.qrCodePath).then((url) => {
-      if (cancelled) {
-        if (url) URL.revokeObjectURL(url);
-        return;
-      }
-      if (url) {
-        setQrDataUrl(url);
-        revoked = url;
-      }
+    void getQrSignedUrl().then((url) => {
+      if (cancelled) return;
+      setQrDataUrl(url);
     });
     return () => {
       cancelled = true;
-      if (revoked) URL.revokeObjectURL(revoked);
     };
-  }, [profile.qrCodePath]);
+  }, [profile.qrCodePath, getQrSignedUrl]);
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -63,13 +46,7 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
     setUploading(true);
     setUploadError(null);
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${profile.id}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from(QR_BUCKET)
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (upErr) throw upErr;
-      const res = await setQrCodePath(path);
+      const res = await uploadQrCode(file);
       if (!res.ok) throw new Error(res.error ?? "Save failed");
       setQrUploadedAt(
         new Date().toLocaleDateString("en-GB", {
@@ -85,6 +62,8 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
       setUploading(false);
     }
   }
+
+
 
   // ---------- Allowance from Engine CC ----------
   const isMoto = profile.vehicle === "မော်တော်ဆိုင်ကယ်";
