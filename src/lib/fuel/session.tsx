@@ -274,6 +274,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [phoneE164, profile],
   );
 
+  const setQrCodePath = useCallback<SessionCtx["setQrCodePath"]>(
+    async (path) => {
+      if (!phoneE164 || !profile) return { ok: false, error: "Not signed in." };
+      try {
+        const updated = await setProfileQrFn({
+          data: { id: profile.id, phone: phoneE164, qr_path: path },
+        });
+        if (!updated) return { ok: false, error: "Could not save QR." };
+        setProfile(rowToProfile(updated));
+        return { ok: true };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : "Could not save QR.",
+        };
+      }
+    },
+    [phoneE164, profile],
+  );
+
+
 
 
   const signOut = useCallback(() => {
