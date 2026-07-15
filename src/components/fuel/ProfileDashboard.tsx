@@ -3,6 +3,7 @@ import { X, Upload, Eye, RefreshCw, QrCode, Fuel, Calculator, History, Bike, Car
 import type { Profile } from "@/lib/fuel/session";
 import { useSession } from "@/lib/fuel/session";
 import { computeAllowance } from "@/lib/fuel/allowance";
+import { useFillHistory } from "@/lib/fuel/fillHistory";
 
 export function ProfileDashboard({ profile }: { profile: Profile }) {
   const { uploadQrCode, getQrSignedUrl } = useSession();
@@ -231,17 +232,8 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
       </section>
 
       {/* ---------- History ---------- */}
-      <section className="rounded-2xl border border-border bg-background/60 p-3">
-        <header className="mb-2 flex items-center gap-1.5">
-          <History className="h-4 w-4 text-primary" aria-hidden />
-          <h3 className="text-sm font-bold text-foreground">ဆီဖြည့်မှတ်တမ်း</h3>
-        </header>
-        <ul className="space-y-2">
-          <HistoryItem date="14 July 2026" station="Mandalay Fuel Station" fuel={profile.fuelType} liters="10 L" cost="31,500 MMK" />
-          <HistoryItem date="07 July 2026" station="Chan Mya Fuel" fuel={profile.fuelType} liters="10 L" cost="31,500 MMK" />
-          <HistoryItem date="30 June 2026" station="Aung Pyi Fuel Depot" fuel={profile.fuelType} liters="20 L" cost="65,000 MMK" />
-        </ul>
-      </section>
+      <HistorySection profileFuel={profile.fuelType} />
+
 
       {/* ---------- Preview modal ---------- */}
       {previewOpen && qrDataUrl && (
@@ -262,6 +254,40 @@ function QuotaCell({ label, value }: { label: string; value: string }) {
       <dt className="text-[10px] text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 text-sm font-bold text-foreground">{value}</dd>
     </div>
+  );
+}
+
+function HistorySection({ profileFuel }: { profileFuel: string }) {
+  const { entries } = useFillHistory();
+  return (
+    <section className="rounded-2xl border border-border bg-background/60 p-3">
+      <header className="mb-2 flex items-center gap-1.5">
+        <History className="h-4 w-4 text-primary" aria-hidden />
+        <h3 className="text-sm font-bold text-foreground">ဆီဖြည့်မှတ်တမ်း</h3>
+      </header>
+      {entries.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border bg-card p-4 text-center text-[12px] text-muted-foreground">
+          မှတ်တမ်း မရှိသေးပါ · ပင်မစာမျက်နှာမှ ဆီဖြည့်မှတ်တမ်းတင်နိုင်ပါသည်
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {entries.slice(0, 10).map((f) => (
+            <HistoryItem
+              key={f.id}
+              date={new Date(f.ts).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+              station={f.stationName}
+              fuel={f.fuelType || profileFuel}
+              liters={`${f.liters} L`}
+              cost={`${f.total.toLocaleString("en-US")} ကျပ်`}
+            />
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
