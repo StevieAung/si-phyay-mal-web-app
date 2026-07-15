@@ -103,6 +103,7 @@ function LeafletMap({
   selectedId,
   userLocation,
   radiusKm,
+  recenterNonce,
   onSelect,
   onFail,
 }: {
@@ -111,6 +112,7 @@ function LeafletMap({
   selectedId?: string;
   userLocation: { lat: number; lng: number } | null;
   radiusKm: number | null;
+  recenterNonce: number;
   onSelect: (id: string) => void;
   onFail: () => void;
 }) {
