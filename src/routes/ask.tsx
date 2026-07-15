@@ -141,7 +141,7 @@ function AskPage() {
           profile_id: profile.id,
           role: "assistant" as const,
           content: aiMsg.text,
-          refs: (aiMsg.refs ?? null) as unknown,
+          refs: aiMsg.refs ? (JSON.parse(JSON.stringify(aiMsg.refs)) as never) : null,
           disclaimer: aiMsg.disclaimer ?? null,
         },
       ];
