@@ -117,12 +117,17 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
         )}
       </section>
 
-      {/* ---------- Parity card (matches AccountSheet row) ---------- */}
-      <section className="rounded-xl border border-border bg-background/60 p-2.5">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">စုံ/မ</p>
-        <p className="mt-0.5 text-sm font-medium text-foreground">
+      {/* ---------- Parity + Fuel Permission (unified) ---------- */}
+      <section className="rounded-2xl border border-border bg-background/60 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-muted-foreground">စုံ / မ · ဆီဖြည့်ခွင့်</p>
+          <span className="rounded-full border border-border bg-background px-1.5 py-0.5 text-[9px] text-muted-foreground">
+            {todayLabel}
+          </span>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
           <span
-            className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+            className={`inline-block rounded-full px-2.5 py-0.5 text-sm font-bold ${
               profile.parity === "စုံ"
                 ? "bg-available/15 text-available"
                 : "bg-primary/15 text-primary"
@@ -130,7 +135,16 @@ export function ProfileDashboard({ profile }: { profile: Profile }) {
           >
             {profile.parity}
           </span>
-        </p>
+          {permission === "allowed" ? (
+            <span className="text-[12px] font-semibold text-available">
+              🟢 ယနေ့ ဆီဖြည့်နိုင်ပါသည်
+            </span>
+          ) : (
+            <span className="text-[12px] font-semibold text-soldout">
+              🔴 ယနေ့ ဆီဖြည့်၍မရပါ
+            </span>
+          )}
+        </div>
       </section>
 
       {/* ---------- Allowance from Engine CC ---------- */}
