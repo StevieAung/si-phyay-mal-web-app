@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { CheckCircle2 } from "lucide-react";
 import { AppShell, BrandHeader } from "@/components/fuel/AppShell";
+import { StationPicker } from "@/components/fuel/StationPicker";
 import { useFuelStore } from "@/lib/fuel/store";
 import { useSession } from "@/lib/fuel/session";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import {
   FUEL_STATUSES,
   FUEL_TYPES,
@@ -28,6 +30,7 @@ function ReportPage() {
   const { stations, addReport } = useFuelStore();
   const navigate = useNavigate();
   const { profile, requireCompleteProfile, isSheetOpen } = useSession();
+  const geo = useGeolocation();
   const guardTriggered = useRef(false);
 
   // Guard access: guests must complete demo profile before reporting.
@@ -130,18 +133,23 @@ function ReportPage() {
 
       <form onSubmit={submit} className="space-y-4">
         <Field label="ဆီဆိုင် · Station">
-          <select
+          <StationPicker
+            stations={stations}
             value={stationId}
-            onChange={(e) => setStationId(e.target.value)}
-            className="h-11 w-full rounded-xl border border-border bg-card px-3 text-sm"
-          >
-            {stations.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} — {s.township}
-              </option>
-            ))}
-          </select>
+            onChange={setStationId}
+            origin={geo.coords}
+          />
         </Field>
+
+        {geo.status === "idle" && (
+          <button
+            type="button"
+            onClick={() => geo.request()}
+            className="-mt-2 text-[11px] font-medium text-primary underline-offset-2 hover:underline"
+          >
+            တည်နေရာဖွင့်၍ အနီးဆုံးဆီဆိုင်များပြရန်
+          </button>
+        )}
 
         <Field label="ဆီအမျိုးအစား · Fuel type">
           <ChipGroup

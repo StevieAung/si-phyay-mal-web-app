@@ -8,25 +8,25 @@ const MAP: Record<
   Available: {
     cls: "bg-available text-available-foreground",
     label: "Available",
-    my: "ရနိုင်",
+    my: "ရရှိနိုင်သည်",
     Icon: CheckCircle2,
   },
   Limited: {
     cls: "bg-limited text-limited-foreground",
     label: "Limited",
-    my: "အနည်းငယ်",
+    my: "အကန့်အသတ်ရှိ",
     Icon: AlertTriangle,
   },
   "Sold Out": {
     cls: "bg-soldout text-soldout-foreground",
     label: "Sold Out",
-    my: "ကုန်ပြီ",
+    my: "ကုန်နေပြီ",
     Icon: XCircle,
   },
   Closed: {
     cls: "bg-closed text-closed-foreground",
     label: "Closed",
-    my: "ပိတ်",
+    my: "ပိတ်ထားသည်",
     Icon: Ban,
   },
 };

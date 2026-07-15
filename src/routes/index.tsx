@@ -33,16 +33,16 @@ export const Route = createFileRoute("/")({
 });
 
 const STATUS_META: Record<FuelStatus, { my: string; dot: string }> = {
-  Available: { my: "ရနိုင်သည်", dot: "bg-available" },
-  Limited: { my: "အနည်းငယ်ရှိ", dot: "bg-limited" },
-  "Sold Out": { my: "ကုန်ဆုံး", dot: "bg-soldout" },
+  Available: { my: "ရရှိနိုင်သည်", dot: "bg-available" },
+  Limited: { my: "အကန့်အသတ်ရှိ", dot: "bg-limited" },
+  "Sold Out": { my: "ကုန်နေပြီ", dot: "bg-soldout" },
   Closed: { my: "ပိတ်ထားသည်", dot: "bg-closed" },
 };
 
 const LEGEND_LABEL: Record<FuelStatus, string> = {
   Available: "ရရှိနိုင်သည်",
-  Limited: "အကန့်အသတ်",
-  "Sold Out": "ရောင်းကုန်",
+  Limited: "အကန့်အသတ်ရှိ",
+  "Sold Out": "ကုန်နေပြီ",
   Closed: "ပိတ်ထားသည်",
 };
 
@@ -62,6 +62,7 @@ function DiscoverPage() {
   const [radius, setRadius] = useState<Radius>(2);
   const [showExplainer, setShowExplainer] = useState(false);
   const [explainerDismissed, setExplainerDismissed] = useState(false);
+  const [showAllNearby, setShowAllNearby] = useState(false);
   const geo = useGeolocation();
   const { profile, openSheet, requireCompleteProfile } = useSession();
   const { entries: fills, addFill } = useFillHistory();
@@ -120,6 +121,8 @@ function DiscoverPage() {
 
   const showAllFallback = radiusActive && rowsInRadius.length === 0;
   const rows = showAllFallback ? rowsAll : rowsInRadius;
+  const visibleRows = showAllNearby ? rows : rows.slice(0, 4);
+  const remainingCount = Math.max(0, rows.length - visibleRows.length);
   const pins = rows.map((r) => ({
     station: r.station,
     status: r.state?.status ?? null,
@@ -286,7 +289,7 @@ function DiscoverPage() {
                     No stations match / တွေ့ရှိမှုမရှိပါ
                   </p>
                 ) : (
-                  rows.map((r) => (
+                  visibleRows.map((r) => (
                     <StationCard
                       key={r.station.id}
                       station={r.station}
@@ -296,6 +299,25 @@ function DiscoverPage() {
                   ))
                 )}
               </div>
+
+              {remainingCount > 0 && !showAllNearby && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllNearby(true)}
+                  className="mt-3 h-11 w-full rounded-full border border-border bg-card text-sm font-medium text-foreground hover:border-primary/40"
+                >
+                  ဆီဆိုင် အားလုံးကြည့်ရန် · View all ({remainingCount} more)
+                </button>
+              )}
+              {showAllNearby && rows.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllNearby(false)}
+                  className="mt-3 h-11 w-full rounded-full border border-border bg-card text-sm font-medium text-foreground hover:border-primary/40"
+                >
+                  အနီးဆုံး ၄ ခုသာပြရန် · Show fewer
+                </button>
+              )}
 
               {/* Log-fill CTA */}
               <button
