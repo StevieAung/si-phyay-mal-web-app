@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Sparkles, Send, MapPin } from "lucide-react";
+import { Sparkles, Send, MapPin, Trash2, Cloud, CloudOff } from "lucide-react";
 import { AppShell, BrandHeader } from "@/components/fuel/AppShell";
 import { useFuelStore } from "@/lib/fuel/store";
 import { MANDALAY_CENTER } from "@/lib/fuel/stations";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { answer, type AssistantReply, type StationRef } from "@/lib/fuel/assistant";
+import { useSession } from "@/lib/fuel/session";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/ask")({
   component: AskPage,
@@ -39,9 +41,29 @@ const WELCOME: ChatMessage = {
   ].join("\n"),
 };
 
+interface ChatRow {
+  id: string;
+  role: string;
+  content: string;
+  refs: unknown;
+  disclaimer: string | null;
+  created_at: string;
+}
+
+function rowToMessage(r: ChatRow): ChatMessage {
+  return {
+    id: r.id,
+    role: r.role === "user" ? "user" : "assistant",
+    text: r.content,
+    refs: Array.isArray(r.refs) ? (r.refs as StationRef[]) : undefined,
+    disclaimer: r.disclaimer ?? undefined,
+  };
+}
+
 function AskPage() {
   const { stations, reports } = useFuelStore();
   const geo = useGeolocation();
+  const { profile, phoneE164, openSheet } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -56,6 +78,31 @@ function AskPage() {
     [stations, reports, geo.coords],
   );
 
+  // Load persisted history whenever the signed-in profile changes.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!profile?.id || !phoneE164) {
+        setMessages([WELCOME]);
+        return;
+      }
+      const { data, error } = await supabase.rpc("get_chat_messages", {
+        _id: profile.id,
+        _phone: phoneE164,
+      });
+      if (cancelled) return;
+      if (error || !data) {
+        setMessages([WELCOME]);
+        return;
+      }
+      const mapped = (data as ChatRow[]).map(rowToMessage);
+      setMessages(mapped.length > 0 ? [WELCOME, ...mapped] : [WELCOME]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.id, phoneE164]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -63,7 +110,7 @@ function AskPage() {
     });
   }, [messages]);
 
-  function send(text: string) {
+  async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed) return;
     const userMsg: ChatMessage = {
@@ -81,7 +128,43 @@ function AskPage() {
     };
     setMessages((m) => [...m, userMsg, aiMsg]);
     setInput("");
+
+    // Persist per-account when signed in; otherwise stays local for this session.
+    if (profile?.id && phoneE164) {
+      const rows = [
+        {
+          profile_id: profile.id,
+          role: "user" as const,
+          content: userMsg.text,
+        },
+        {
+          profile_id: profile.id,
+          role: "assistant" as const,
+          content: aiMsg.text,
+          refs: (aiMsg.refs ?? null) as unknown,
+          disclaimer: aiMsg.disclaimer ?? null,
+        },
+      ];
+      const { error } = await supabase.from("chat_messages").insert(rows);
+      if (error) console.error("[chat] insert failed", error);
+    }
   }
+
+  async function clearHistory() {
+    if (!profile?.id || !phoneE164) {
+      setMessages([WELCOME]);
+      return;
+    }
+    const { error } = await supabase.rpc("clear_chat_messages", {
+      _id: profile.id,
+      _phone: phoneE164,
+    });
+    if (error) console.error("[chat] clear failed", error);
+    setMessages([WELCOME]);
+  }
+
+  const signedIn = !!profile?.id && !!phoneE164;
+  const hasHistory = messages.length > 1;
 
   return (
     <AppShell>
