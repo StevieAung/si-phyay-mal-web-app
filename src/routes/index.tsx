@@ -289,7 +289,7 @@ function DiscoverPage() {
                     No stations match / တွေ့ရှိမှုမရှိပါ
                   </p>
                 ) : (
-                  rows.map((r) => (
+                  visibleRows.map((r) => (
                     <StationCard
                       key={r.station.id}
                       station={r.station}
@@ -299,6 +299,25 @@ function DiscoverPage() {
                   ))
                 )}
               </div>
+
+              {remainingCount > 0 && !showAllNearby && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllNearby(true)}
+                  className="mt-3 h-11 w-full rounded-full border border-border bg-card text-sm font-medium text-foreground hover:border-primary/40"
+                >
+                  ဆီဆိုင် အားလုံးကြည့်ရန် · View all ({remainingCount} more)
+                </button>
+              )}
+              {showAllNearby && rows.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllNearby(false)}
+                  className="mt-3 h-11 w-full rounded-full border border-border bg-card text-sm font-medium text-foreground hover:border-primary/40"
+                >
+                  အနီးဆုံး ၄ ခုသာပြရန် · Show fewer
+                </button>
+              )}
 
               {/* Log-fill CTA */}
               <button
