@@ -49,11 +49,12 @@ export function StationMap({
         selectedId={selectedId}
         userLocation={userLocation ?? null}
         radiusKm={radiusKm ?? null}
+        recenterNonce={recenterNonce}
         onSelect={(id) => navigate({ to: "/station/$id", params: { id } })}
         onFail={() => setFailed(true)}
       />
     );
-  }, [mounted, pins, center, selectedId, userLocation, radiusKm, navigate]);
+  }, [mounted, pins, center, selectedId, userLocation, radiusKm, recenterNonce, navigate]);
 
   return (
     <div className={`relative w-full overflow-hidden bg-secondary ${heightClass}`}>
