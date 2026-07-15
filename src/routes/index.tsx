@@ -62,6 +62,7 @@ function DiscoverPage() {
   const [radius, setRadius] = useState<Radius>(2);
   const [showExplainer, setShowExplainer] = useState(false);
   const [explainerDismissed, setExplainerDismissed] = useState(false);
+  const [showAllNearby, setShowAllNearby] = useState(false);
   const geo = useGeolocation();
   const { profile, openSheet, requireCompleteProfile } = useSession();
   const { entries: fills, addFill } = useFillHistory();
