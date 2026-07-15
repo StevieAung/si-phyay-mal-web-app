@@ -257,6 +257,40 @@ function QuotaCell({ label, value }: { label: string; value: string }) {
   );
 }
 
+function HistorySection({ profileFuel }: { profileFuel: string }) {
+  const { entries } = useFillHistory();
+  return (
+    <section className="rounded-2xl border border-border bg-background/60 p-3">
+      <header className="mb-2 flex items-center gap-1.5">
+        <History className="h-4 w-4 text-primary" aria-hidden />
+        <h3 className="text-sm font-bold text-foreground">ဆီဖြည့်မှတ်တမ်း</h3>
+      </header>
+      {entries.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border bg-card p-4 text-center text-[12px] text-muted-foreground">
+          မှတ်တမ်း မရှိသေးပါ · ပင်မစာမျက်နှာမှ ဆီဖြည့်မှတ်တမ်းတင်နိုင်ပါသည်
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {entries.slice(0, 10).map((f) => (
+            <HistoryItem
+              key={f.id}
+              date={new Date(f.ts).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+              station={f.stationName}
+              fuel={f.fuelType || profileFuel}
+              liters={`${f.liters} L`}
+              cost={`${f.total.toLocaleString("en-US")} ကျပ်`}
+            />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function HistoryItem({
   date,
   station,
