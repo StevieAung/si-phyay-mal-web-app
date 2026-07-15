@@ -121,6 +121,8 @@ function DiscoverPage() {
 
   const showAllFallback = radiusActive && rowsInRadius.length === 0;
   const rows = showAllFallback ? rowsAll : rowsInRadius;
+  const visibleRows = showAllNearby ? rows : rows.slice(0, 4);
+  const remainingCount = Math.max(0, rows.length - visibleRows.length);
   const pins = rows.map((r) => ({
     station: r.station,
     status: r.state?.status ?? null,
