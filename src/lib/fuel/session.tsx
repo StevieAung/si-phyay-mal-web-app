@@ -30,6 +30,7 @@ export interface Profile {
   parity: PlateParity;
   fuelType: FuelPref;
   engineCc: number;
+  qrCodePath: string | null;
 }
 
 export type PendingIntentKind = "directions" | "report" | "confirm";
